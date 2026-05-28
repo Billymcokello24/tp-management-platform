@@ -4,6 +4,10 @@ import bcryptjs from "bcryptjs";
 import { prisma } from "./prisma";
 
 export default {
+  trustHost: true,
+  pages: {
+    signIn: "/login",
+  },
   providers: [
     Credentials({
       name: "Credentials",
