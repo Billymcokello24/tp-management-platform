@@ -10,6 +10,7 @@ const publicRoutes = [
   "/login",
   "/register",
   "/forgot-password",
+  "/dashboard",
   "/student_template.csv",
   "/lecturer_template.csv",
 ];
@@ -17,33 +18,45 @@ const publicRoutes = [
 export default auth((req) => {
   const { nextUrl } = req;
   const isLoggedIn = !!req.auth;
-  
+
   const isPublicRoute = publicRoutes.includes(nextUrl.pathname);
-  
+
+  // If logged in and visiting login/register/dashboard, redirect to role-specific dashboard
+  if (isLoggedIn && (nextUrl.pathname === "/login" || nextUrl.pathname === "/register" || nextUrl.pathname === "/dashboard")) {
+    const role = (req.auth?.user as any)?.role?.toLowerCase() || "student";
+    const target = `/${role}/dashboard`;
+    // Prevent self-redirect
+    if (target !== nextUrl.pathname) {
+      return NextResponse.redirect(new URL(target, nextUrl));
+    }
+  }
+
+  // If not logged in and not on a public route, redirect to login
   if (!isLoggedIn && !isPublicRoute) {
     return NextResponse.redirect(new URL("/login", nextUrl));
   }
-  
-  if (isLoggedIn && (nextUrl.pathname === "/login" || nextUrl.pathname === "/register" || nextUrl.pathname === "/dashboard")) {
-    const role = (req.auth?.user as any)?.role?.toLowerCase() || "student";
-    return NextResponse.redirect(new URL(`/${role}/dashboard`, nextUrl));
-  }
-  
+
   // Basic RBAC checking
   if (isLoggedIn) {
     const role = (req.auth?.user as any)?.role?.toUpperCase() || "STUDENT";
-    
-    // Admin trying to access student/lecturer routes or vice-versa
+    const roleDashboard = `/${role.toLowerCase()}/dashboard`;
+
     if (nextUrl.pathname.startsWith("/admin") && role !== "ADMIN") {
-      return NextResponse.redirect(new URL(`/${role.toLowerCase()}/dashboard`, nextUrl));
+      if (roleDashboard !== nextUrl.pathname) {
+        return NextResponse.redirect(new URL(roleDashboard, nextUrl));
+      }
     }
-    
+
     if (nextUrl.pathname.startsWith("/lecturer") && role !== "LECTURER") {
-      return NextResponse.redirect(new URL(`/${role.toLowerCase()}/dashboard`, nextUrl));
+      if (roleDashboard !== nextUrl.pathname) {
+        return NextResponse.redirect(new URL(roleDashboard, nextUrl));
+      }
     }
-    
+
     if (nextUrl.pathname.startsWith("/student") && role !== "STUDENT") {
-      return NextResponse.redirect(new URL(`/${role.toLowerCase()}/dashboard`, nextUrl));
+      if (roleDashboard !== nextUrl.pathname) {
+        return NextResponse.redirect(new URL(roleDashboard, nextUrl));
+      }
     }
   }
 
