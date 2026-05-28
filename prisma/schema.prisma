@@ -1,0 +1,333 @@
+// TP Management Platform - Prisma Schema
+// Models for Teaching Practice Management at Kenyan Universities
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Enums ──────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  LECTURER
+  STUDENT
+}
+
+enum TPStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+}
+
+enum AssessmentStatus {
+  DRAFT
+  SUBMITTED
+  REVIEWED
+}
+
+enum PlanStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum NotificationType {
+  ASSESSMENT
+  LESSON_PLAN
+  ASSIGNMENT
+  GENERAL
+}
+
+// ── Authentication & Users ─────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified DateTime?
+  password      String?
+  image         String?
+  phone         String?
+  role          Role      @default(STUDENT)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  student       Student?
+  lecturer      Lecturer?
+  notifications Notification[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ── Student Profile ────────────────────────────────
+
+model Student {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  admissionNumber String   @unique
+  course          String
+  subjects        String[]
+  tpStatus        TPStatus @default(PENDING)
+  schoolId        String?
+  assignmentId    String?
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school       School?       @relation(fields: [schoolId], references: [id])
+  assignment   Assignment?   @relation(fields: [assignmentId], references: [id], onDelete: SetNull)
+  lessonPlans  LessonPlan[]
+  schemesOfWork SchemeOfWork[]
+  assessments  Assessment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([schoolId])
+  @@index([assignmentId])
+}
+
+// ── Lecturer Profile ───────────────────────────────
+
+model Lecturer {
+  id         String  @id @default(cuid())
+  userId     String  @unique
+  department String
+  zone       String?
+  county     String?
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignments Assignment[]
+  assessments Assessment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ── School ─────────────────────────────────────────
+
+model School {
+  id        String  @id @default(cuid())
+  name      String
+  county    String
+  subCounty String
+  principal String?
+  phone     String?
+  email     String?
+
+  students Student[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ── Assignment (Lecturer ↔ Students) ───────────────
+
+model Assignment {
+  id         String  @id @default(cuid())
+  lecturerId String
+  isLocked   Boolean @default(false)
+
+  lecturer Lecturer  @relation(fields: [lecturerId], references: [id], onDelete: Cascade)
+  students Student[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([lecturerId])
+}
+
+// ── Assessment (TOM MBOYA University Rubric) ───────
+
+model Assessment {
+  id         String           @id @default(cuid())
+  studentId  String
+  lecturerId String
+  status     AssessmentStatus @default(DRAFT)
+
+  // PREPARATION (T/Marks 12)
+  // Scheme of work (T/Marks 2)
+  schemeOfWorkMark     Int @default(0) // Max 2
+  // Lesson Plan (T/Marks 10)
+  lessonPlanObjectives Int @default(0) // Max 4 - Objective: audience, behavior, standard, condition
+  lessonPlanActivities Int @default(0) // Max 2 - Learning activities varied, challenging, learner-centered
+  lessonPlanSequence   Int @default(0) // Max 4 - Sequential arrangement of content
+
+  // PRESENTATION (T/Marks 80)
+  // Introduction (T/Marks 5)
+  introductionMark Int @default(0) // Max 5 - Set induction skills
+
+  // Lesson Development (T/Marks 30)
+  logicalPresentation Int @default(0) // Max 5 - Logical presentations of contents
+  contentRelevance    Int @default(0) // Max 5 - Relevance of content to class level
+  contentAdequacy     Int @default(0) // Max 5 - Adequacy of content to lesson time
+  teachingStrategies  Int @default(0) // Max 5 - Strategies and methods
+  teachingSkills      Int @default(0) // Max 5 - Motivation, reinforcement, questioning
+  contentMastery      Int @default(0) // Max 5 - Mastery of content
+
+  // Communication (T/Marks 5)
+  communicationMark Int @default(0) // Max 5 - Verbal & Non-verbal
+
+  // Resource Materials (T/Marks 15)
+  chalkboardUse           Int @default(0) // Max 3 - Chalkboard layout and use
+  resourceTiming          Int @default(0) // Max 3 - Timing and attractiveness
+  resourceAppropriateness Int @default(0) // Max 4 - Appropriateness
+  resourceInnovativeness  Int @default(0) // Max 5 - Innovativeness, originality
+
+  // Classroom Management (T/Marks 20)
+  learnerControl       Int @default(0) // Max 5 - Control and knowledge of learners
+  learnerParticipation Int @default(0) // Max 5 - Learner participation
+  groupWork            Int @default(0) // Max 4 - Group work / individual differences
+  teacherLearnerRapport Int @default(0) // Max 5 - Teacher/learner rapport  (renamed from teacherLearnerRapport for clarity, keeping original field name)
+
+  // Conclusion (T/Marks 5)
+  closureSkills        Int @default(0) // Max 2 - Review, questions
+  concludingActivities Int @default(0) // Max 2 - Evaluation
+  assignmentMark       Int @default(0) // Max 1 - Assignment
+
+  // Teacher Personality (T/Marks 5)
+  personalityMark Int @default(0) // Max 5 - Confidence, dressing, mannerisms
+
+  // Self Appraisal (T/Marks 3)
+  selfAppraisalMark Int @default(0) // Max 3 - Use of previous comments
+
+  // Computed totals
+  totalMarks     Int     @default(0) // Max 100
+  grade          String?
+  performanceBand String? // Below Average, Average, Above Average
+
+  // Comments
+  generalComments    String? @db.Text
+  areasOfStrength    String? @db.Text
+  areasOfImprovement String? @db.Text
+
+  student  Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lecturer Lecturer @relation(fields: [lecturerId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentId])
+  @@index([lecturerId])
+}
+
+// ── Lesson Plan ────────────────────────────────────
+
+model LessonPlan {
+  id           String     @id @default(cuid())
+  studentId    String
+  
+  // Basic Info
+  subject      String
+  classForm    String
+  stream       String?
+  topic        String
+  subTopic     String?
+  date         DateTime
+  startTime    String?
+  endTime      String?
+  duration     String?
+  
+  // Content
+  objectives   String     @db.Text
+  introduction String     @db.Text
+  developmentSteps Json?  // Stores an array of { step, teacherActivity, learnerActivity, resources, time }
+  conclusion   String     @db.Text
+  methods      String[]
+  resources    String     @db.Text
+  assessment   String?    @db.Text
+  assignment   String?    @db.Text
+  reflection   String?    @db.Text
+  
+  // Meta
+  status       PlanStatus @default(DRAFT)
+  reviewComment String?   @db.Text
+  fileUrl      String?
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentId])
+}
+
+// ── Scheme of Work ─────────────────────────────────
+
+model SchemeOfWork {
+  id        String     @id @default(cuid())
+  studentId String
+  title     String
+  subject   String
+  term      String
+  fileUrl   String?
+  status    PlanStatus @default(DRAFT)
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentId])
+}
+
+// ── Notification ───────────────────────────────────
+
+model Notification {
+  id      String           @id @default(cuid())
+  userId  String
+  title   String
+  message String
+  type    NotificationType
+  isRead  Boolean          @default(false)
+  link    String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
