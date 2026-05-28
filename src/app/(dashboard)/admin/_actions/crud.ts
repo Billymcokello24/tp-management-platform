@@ -67,6 +67,7 @@ export async function updateStudent(
     course: string;
     subjects: string[];
     schoolId?: string;
+    password?: string;
   }
 ) {
   const student = await prisma.student.findUnique({
@@ -76,10 +77,15 @@ export async function updateStudent(
 
   if (!student) throw new Error("Student not found");
 
+  const updateData: any = { name: data.name, phone: data.phone || null };
+  if (data.password && data.password.trim() !== "") {
+    updateData.password = await bcryptjs.hash(data.password, 10);
+  }
+
   await prisma.$transaction([
     prisma.user.update({
       where: { id: student.userId },
-      data: { name: data.name, phone: data.phone || null },
+      data: updateData,
     }),
     prisma.student.update({
       where: { id: studentId },
@@ -237,6 +243,7 @@ export async function updateLecturer(
     department: string;
     zone?: string;
     county?: string;
+    password?: string;
   }
 ) {
   const lecturer = await prisma.lecturer.findUnique({
@@ -246,10 +253,15 @@ export async function updateLecturer(
 
   if (!lecturer) throw new Error("Lecturer not found");
 
+  const updateData: any = { name: data.name, email: data.email.toLowerCase().trim(), phone: data.phone || null };
+  if (data.password && data.password.trim() !== "") {
+    updateData.password = await bcryptjs.hash(data.password, 10);
+  }
+
   await prisma.$transaction([
     prisma.user.update({
       where: { id: lecturer.userId },
-      data: { name: data.name, email: data.email.toLowerCase().trim(), phone: data.phone || null },
+      data: updateData,
     }),
     prisma.lecturer.update({
       where: { id: lecturerId },

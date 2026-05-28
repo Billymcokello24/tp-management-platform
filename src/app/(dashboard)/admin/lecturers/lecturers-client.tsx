@@ -90,6 +90,7 @@ export function LecturersClient({ lecturers }: { lecturers: Lecturer[] }) {
         department: form.department,
         zone: form.zone || undefined,
         county: form.county || undefined,
+        password: form.password || undefined,
       });
       toast.success("Lecturer updated!");
       setEditOpen(false);
