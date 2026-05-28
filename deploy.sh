@@ -17,9 +17,9 @@ echo "📦 Installing Node dependencies..."
 npm ci --legacy-peer-deps
 
 # 3. Prisma Schema & DB Migrations
-echo "🗄️ Generating Prisma Client and running migrations..."
+echo "🗄️ Generating Prisma Client and updating database schema..."
 npx prisma generate
-npx prisma migrate deploy
+npx prisma db push
 
 # 4. Build Next.js App
 echo "🏗️ Building the Next.js production bundle..."
