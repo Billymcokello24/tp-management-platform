@@ -5,6 +5,11 @@ const nextConfig: NextConfig = {
     // Ignore parent lockfiles to prevent OS file watch limit reached
     root: __dirname
   },
+  experimental: {
+    serverActions: {
+      allowedOrigins: ['tp.digiprojects.co.ke', 'https://tp.digiprojects.co.ke']
+    }
+  },
   async headers() {
     return [
       {

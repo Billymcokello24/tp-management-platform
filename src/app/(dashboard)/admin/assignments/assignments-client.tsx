@@ -42,6 +42,7 @@ export function AssignmentsClient({
         toast.success(result.message);
       }
     } catch (error: any) {
+      console.error("Assignment Engine Error:", error);
       toast.error(error.message || "Failed to generate assignments.");
     } finally {
       setLoading(false);
