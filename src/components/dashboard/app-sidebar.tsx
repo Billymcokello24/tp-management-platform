@@ -98,8 +98,6 @@ export function AppSidebar() {
           ],
           secondary: [
             { title: "Schemes of Work", href: "/student/schemes", icon: BookOpen },
-            { title: "Resources", href: "/student/resources", icon: FolderOpen },
-            { title: "Results", href: "/student/results", icon: Award },
           ],
           system: [
             { title: "Notifications", href: "/student/notifications", icon: Bell },

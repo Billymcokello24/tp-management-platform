@@ -64,7 +64,7 @@ export default function LoginPage() {
   }
 
   return (
-    <Card className="border border-border/50 shadow-xl rounded-2xl overflow-hidden bg-card">
+    <Card className="border-0 sm:border sm:border-border/50 shadow-none sm:shadow-xl rounded-3xl overflow-hidden bg-transparent sm:bg-card/95 sm:backdrop-blur-xl">
       <CardHeader className="space-y-4 text-center pt-8">
         <TMULogo size="xl" containerClassName="mx-auto" />
         <div className="space-y-2">

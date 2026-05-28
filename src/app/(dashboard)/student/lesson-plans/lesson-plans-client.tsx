@@ -4,8 +4,11 @@ import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/admin/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FilePlus, Eye, Edit } from "lucide-react";
+import { FilePlus, Eye, Edit, Upload, FileSpreadsheet } from "lucide-react";
 import Link from "next/link";
+import { useRef, useState } from "react";
+import { toast } from "sonner";
+import { saveLessonPlan } from "../_actions/lesson-plans";
 
 interface LessonPlanRow {
   id: string;
@@ -18,6 +21,9 @@ interface LessonPlanRow {
 }
 
 export function LessonPlansClient({ plans }: { plans: LessonPlanRow[] }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
   const columns: ColumnDef<LessonPlanRow>[] = [
     {
       accessorKey: "topic",
@@ -76,8 +82,68 @@ export function LessonPlansClient({ plans }: { plans: LessonPlanRow[] }) {
     },
   ];
 
+  const downloadTemplate = () => {
+    const header = "Subject,Class/Form,Stream,Topic,SubTopic,Date,StartTime,EndTime,Duration,Objectives\n";
+    const example = '"Mathematics","Form 2","East","Algebra","Linear Equations","2026-06-01","08:00","08:40","40 mins","By the end of the lesson..."\n';
+    const blob = new Blob([header + example], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "lesson_plans_template.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const csv = event.target?.result as string;
+        const lines = csv.split('\n');
+        if (lines.length > 1) {
+          const parsedRows = lines.slice(1).filter(l => l.trim().length > 0).map(line => {
+            const values = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g)?.map(v => v.replace(/^"|"$/g, '').trim()) || [];
+            return {
+              subject: values[0] || "Untitled Subject",
+              classForm: values[1] || "",
+              stream: values[2] || "",
+              topic: values[3] || "Untitled Topic",
+              subTopic: values[4] || "",
+              date: values[5] ? new Date(values[5]).toISOString() : new Date().toISOString(),
+              startTime: values[6] || "",
+              endTime: values[7] || "",
+              duration: values[8] || "",
+              objectives: values[9] || "",
+              status: "DRAFT"
+            };
+          });
+
+          // Upload sequentially to avoid overwhelming the server
+          let count = 0;
+          for (const plan of parsedRows) {
+            await saveLessonPlan(plan);
+            count++;
+          }
+          toast.success(`Successfully uploaded ${count} lesson plans as drafts.`);
+          window.location.reload();
+        }
+      } catch (error: any) {
+        toast.error("Failed to process CSV file.");
+      } finally {
+        setIsUploading(false);
+      }
+    };
+    reader.readAsText(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-8">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 pt-4">
         <div>
           <div className="flex items-center gap-2 mb-2">
@@ -91,11 +157,29 @@ export function LessonPlansClient({ plans }: { plans: LessonPlanRow[] }) {
             Manage your digital lesson plans and submissions.
           </p>
         </div>
-        <Link href="/student/lesson-plans/new">
-          <Button className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-sm">
-            <FilePlus className="h-4 w-4 mr-2" /> Create Lesson Plan
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={downloadTemplate} className="rounded-xl h-10 hidden sm:flex">
+            <FileSpreadsheet className="w-4 h-4 mr-2" /> Template
           </Button>
-        </Link>
+          <div className="relative">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              onChange={handleFileUpload}
+              disabled={isUploading}
+              className="absolute inset-0 opacity-0 cursor-pointer z-10 disabled:cursor-not-allowed"
+            />
+            <Button variant="secondary" size="sm" className="rounded-xl h-10 w-full sm:w-auto pointer-events-none" disabled={isUploading}>
+              <Upload className="w-4 h-4 mr-2" /> {isUploading ? "Uploading..." : "Bulk CSV"}
+            </Button>
+          </div>
+          <Link href="/student/lesson-plans/new" className="flex-1 sm:flex-none">
+            <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-sm h-10">
+              <FilePlus className="h-4 w-4 mr-2" /> New Lesson
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <DataTable

@@ -39,7 +39,7 @@ export async function createStudent(data: {
   await prisma.user.create({
     data: {
       name: data.name,
-      email,
+      email: email.toLowerCase().trim(),
       phone: data.phone || null,
       password: passwordHash,
       role: "STUDENT",
@@ -156,7 +156,7 @@ export async function bulkCreateStudents(
       await prisma.user.create({
         data: {
           name: row.name,
-          email,
+          email: email.toLowerCase().trim(),
           phone: row.phone || null,
           password: currentPasswordHash,
           role: "STUDENT",
@@ -210,7 +210,7 @@ export async function createLecturer(data: {
   await prisma.user.create({
     data: {
       name: data.name,
-      email: data.email,
+      email: data.email.toLowerCase().trim(),
       phone: data.phone || null,
       password: passwordHash,
       role: "LECTURER",
@@ -249,7 +249,7 @@ export async function updateLecturer(
   await prisma.$transaction([
     prisma.user.update({
       where: { id: lecturer.userId },
-      data: { name: data.name, email: data.email, phone: data.phone || null },
+      data: { name: data.name, email: data.email.toLowerCase().trim(), phone: data.phone || null },
     }),
     prisma.lecturer.update({
       where: { id: lecturerId },
@@ -314,7 +314,7 @@ export async function bulkCreateLecturers(
       await prisma.user.create({
         data: {
           name: row.name,
-          email: row.email,
+          email: row.email.toLowerCase().trim(),
           phone: row.phone || null,
           password: currentPasswordHash,
           role: "LECTURER",

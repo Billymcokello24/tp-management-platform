@@ -303,6 +303,7 @@ model SchemeOfWork {
   title     String
   subject   String
   term      String
+  content   Json?
   fileUrl   String?
   status    PlanStatus @default(DRAFT)
 

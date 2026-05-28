@@ -20,13 +20,13 @@ export default {
           return null;
         }
 
-        const identifier = credentials.identifier as string;
+        const identifier = (credentials.identifier as string).trim();
         let user = null;
 
         // Check if identifier is an email (Lecturer/Admin)
         if (identifier.includes("@")) {
           user = await prisma.user.findUnique({
-            where: { email: identifier },
+            where: { email: identifier.toLowerCase() },
           });
         } else {
           // It's an admission number (Student)
