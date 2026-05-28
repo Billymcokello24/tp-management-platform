@@ -116,12 +116,12 @@ export function AppSidebar() {
   return (
     <Sidebar variant="inset">
       {/* Logo / Brand */}
-      <SidebarHeader className="h-16 flex items-center border-b border-sidebar-border px-5">
-        <Link href={`/${role.toLowerCase()}/dashboard`} className="flex items-center gap-3">
-          <TMULogo size="md" />
-          <div className="flex flex-col">
-            <span className="font-bold text-sm tracking-tight text-foreground">TMU Portal</span>
-            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Teaching Practice</span>
+      <SidebarHeader className="h-20 flex flex-row items-center justify-start border-b border-sidebar-border pl-4 pr-12">
+        <Link href={`/${role.toLowerCase()}/dashboard`} className="flex items-center gap-3 w-full">
+          <TMULogo size="lg" />
+          <div className="flex flex-col min-w-0">
+            <span className="font-bold text-base tracking-tight text-foreground truncate">TMU Portal</span>
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider truncate">Teaching Practice</span>
           </div>
         </Link>
       </SidebarHeader>
@@ -138,13 +138,9 @@ export function AppSidebar() {
                     render={<Link href={item.href} />}
                     isActive={isActive(item.href)}
                     tooltip={item.title}
-                    className={`rounded-xl transition-all duration-200 ${
-                      isActive(item.href)
-                        ? "bg-primary/10 text-primary font-semibold shadow-sm"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    }`}
+                    className="rounded-xl transition-all duration-200"
                   >
-                    <item.icon className={isActive(item.href) ? "text-primary" : ""} />
+                    <item.icon />
                     <span>{item.title}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -168,13 +164,9 @@ export function AppSidebar() {
                     render={<Link href={item.href} />}
                     isActive={isActive(item.href)}
                     tooltip={item.title}
-                    className={`rounded-xl transition-all duration-200 ${
-                      isActive(item.href)
-                        ? "bg-primary/10 text-primary font-semibold shadow-sm"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    }`}
+                    className="rounded-xl transition-all duration-200"
                   >
-                    <item.icon className={isActive(item.href) ? "text-primary" : ""} />
+                    <item.icon />
                     <span>{item.title}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -196,13 +188,9 @@ export function AppSidebar() {
                     render={<Link href={item.href} />}
                     isActive={isActive(item.href)}
                     tooltip={item.title}
-                    className={`rounded-xl transition-all duration-200 ${
-                      isActive(item.href)
-                        ? "bg-primary/10 text-primary font-semibold shadow-sm"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    }`}
+                    className="rounded-xl transition-all duration-200"
                   >
-                    <item.icon className={isActive(item.href) ? "text-primary" : ""} />
+                    <item.icon />
                     <span>{item.title}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
