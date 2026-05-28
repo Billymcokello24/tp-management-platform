@@ -31,19 +31,19 @@ export default auth((req) => {
   
   // Basic RBAC checking
   if (isLoggedIn) {
-    const role = (req.auth?.user as any)?.role;
+    const role = (req.auth?.user as any)?.role?.toUpperCase() || "STUDENT";
     
     // Admin trying to access student/lecturer routes or vice-versa
     if (nextUrl.pathname.startsWith("/admin") && role !== "ADMIN") {
-      return NextResponse.redirect(new URL(`/${role?.toLowerCase() || "student"}/dashboard`, nextUrl));
+      return NextResponse.redirect(new URL(`/${role.toLowerCase()}/dashboard`, nextUrl));
     }
     
     if (nextUrl.pathname.startsWith("/lecturer") && role !== "LECTURER") {
-      return NextResponse.redirect(new URL(`/${role?.toLowerCase() || "student"}/dashboard`, nextUrl));
+      return NextResponse.redirect(new URL(`/${role.toLowerCase()}/dashboard`, nextUrl));
     }
     
     if (nextUrl.pathname.startsWith("/student") && role !== "STUDENT") {
-      return NextResponse.redirect(new URL(`/${role?.toLowerCase() || "student"}/dashboard`, nextUrl));
+      return NextResponse.redirect(new URL(`/${role.toLowerCase()}/dashboard`, nextUrl));
     }
   }
 
