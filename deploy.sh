@@ -14,7 +14,7 @@ git pull origin main
 
 # 2. Install dependencies (using ci for strict lockfile adherence)
 echo "📦 Installing Node dependencies..."
-npm ci
+npm ci --legacy-peer-deps
 
 # 3. Prisma Schema & DB Migrations
 echo "🗄️ Generating Prisma Client and running migrations..."
