@@ -37,7 +37,7 @@ export default function DashboardLayout({
           </header>
           {/* Main Content Area */}
           <div className="flex-1 p-3 sm:p-6 lg:p-8 overflow-auto">
-            <div className="mx-auto w-[90%] max-w-[1600px]">
+            <div className="mx-auto w-full md:w-[90%] max-w-[1600px]">
               {children}
             </div>
           </div>

@@ -115,6 +115,7 @@ export function StudentsClient({ students, schools }: { students: Student[]; sch
         subjects: form.subjects.split(",").map((s) => s.trim()).filter(Boolean),
         phone: form.phone || undefined,
         schoolId: form.schoolId || undefined,
+        password: form.password || undefined,
       });
       toast.success("Student updated successfully!");
       setEditOpen(false);

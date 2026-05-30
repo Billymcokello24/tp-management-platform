@@ -14,7 +14,7 @@ export default function LandingPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-white/95 via-white/85 to-slate-50/95" />
       </div>
 
-      <header className="px-6 py-5 flex items-center justify-between border-b border-slate-200/50 bg-white/60 backdrop-blur-xl sticky top-0 z-50 transition-all duration-300 shadow-sm w-[90%] mx-auto rounded-b-3xl mt-0">
+      <header className="px-6 py-5 flex items-center justify-between border-b border-slate-200/50 bg-white/60 backdrop-blur-xl sticky top-0 z-50 transition-all duration-300 shadow-sm w-full md:w-[90%] mx-auto md:rounded-b-3xl mt-0">
         <div className="flex items-center gap-3">
           <TMULogo size="lg" />
           <span className="text-2xl font-extrabold tracking-tight text-[#1e3a8a] drop-shadow-sm">TMU TP Platform</span>
@@ -28,7 +28,7 @@ export default function LandingPage() {
         </div>
       </header>
       
-      <main className="flex-1 flex flex-col items-center justify-center text-center px-4 py-32 z-10 relative w-[90%] mx-auto max-w-[1600px]">
+      <main className="flex-1 flex flex-col items-center justify-center text-center px-4 py-32 z-10 relative w-full md:w-[90%] mx-auto max-w-[1600px]">
         <div className="bg-[#eab308]/15 border border-[#eab308]/40 text-[#b45309] px-5 py-2 rounded-full text-sm font-semibold mb-8 animate-in fade-in slide-in-from-bottom-6 duration-700 shadow-sm">
           Streamlining University Practicums
         </div>
