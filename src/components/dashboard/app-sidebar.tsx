@@ -82,6 +82,7 @@ export function AppSidebar() {
             { title: "Lesson Plans", href: "/lecturer/lesson-plans", icon: FileText },
           ],
           secondary: [
+            { title: "Schemes of Work", href: "/lecturer/schemes", icon: BookOpen },
             { title: "Notifications", href: "/lecturer/notifications", icon: Bell },
           ],
           system: [

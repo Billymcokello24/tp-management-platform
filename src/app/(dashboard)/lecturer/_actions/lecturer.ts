@@ -79,3 +79,101 @@ export async function getMyStudents() {
   const students = lecturer.assignments.reduce((acc, assignment) => [...acc, ...assignment.students], [] as any[]);
   return students;
 }
+
+export async function getMyStudentsWithLessonPlans() {
+  const session = await auth();
+  if (!session?.user?.id || (session.user as any).role !== "LECTURER") {
+    throw new Error("Unauthorized");
+  }
+
+  const lecturer = await prisma.lecturer.findUnique({
+    where: { userId: session.user.id },
+    include: {
+      assignments: {
+        include: {
+          students: {
+            include: {
+              user: { select: { name: true, email: true } },
+              school: { select: { name: true, county: true } },
+              lessonPlans: {
+                orderBy: { createdAt: "desc" },
+                select: {
+                  id: true,
+                  subject: true,
+                  topic: true,
+                  classForm: true,
+                  date: true,
+                  status: true,
+                  createdAt: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!lecturer) return [];
+
+  const students = lecturer.assignments.reduce(
+    (acc, assignment) => [...acc, ...assignment.students],
+    [] as any[]
+  );
+
+  // Deduplicate by student id
+  const seen = new Set<string>();
+  return students.filter((s: any) => {
+    if (seen.has(s.id)) return false;
+    seen.add(s.id);
+    return true;
+  });
+}
+
+export async function getMyStudentsWithSchemes() {
+  const session = await auth();
+  if (!session?.user?.id || (session.user as any).role !== "LECTURER") {
+    throw new Error("Unauthorized");
+  }
+
+  const lecturer = await prisma.lecturer.findUnique({
+    where: { userId: session.user.id },
+    include: {
+      assignments: {
+        include: {
+          students: {
+            include: {
+              user: { select: { name: true, email: true } },
+              school: { select: { name: true, county: true } },
+              schemesOfWork: {
+                orderBy: { createdAt: "desc" },
+                select: {
+                  id: true,
+                  title: true,
+                  subject: true,
+                  term: true,
+                  status: true,
+                  createdAt: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!lecturer) return [];
+
+  const students = lecturer.assignments.reduce(
+    (acc, assignment) => [...acc, ...assignment.students],
+    [] as any[]
+  );
+
+  const seen = new Set<string>();
+  return students.filter((s: any) => {
+    if (seen.has(s.id)) return false;
+    seen.add(s.id);
+    return true;
+  });
+}
