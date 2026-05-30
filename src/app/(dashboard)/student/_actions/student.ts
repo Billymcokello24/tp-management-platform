@@ -75,3 +75,70 @@ export async function getStudentSchoolData() {
 
   return student?.school;
 }
+
+import { revalidatePath } from "next/cache";
+
+export async function updateStudentSchool(data: {
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  county: string;
+}) {
+  const session = await auth();
+  if (!session?.user?.id || (session.user as any).role !== "STUDENT") {
+    throw new Error("Unauthorized");
+  }
+
+  const student = await prisma.student.findUnique({
+    where: { userId: session.user.id },
+  });
+
+  if (!student) throw new Error("Student not found");
+
+  // 1. Check if school already exists by name (case-insensitive approximation)
+  // To keep it simple, we search for an exact match first.
+  let school = await prisma.school.findFirst({
+    where: {
+      name: { equals: data.name, mode: "insensitive" },
+    },
+  });
+
+  // 2. If it doesn't exist, create it (it will be "Unzoned")
+  if (!school) {
+    school = await prisma.school.create({
+      data: {
+        name: data.name,
+        address: data.address,
+        latitude: data.latitude,
+        longitude: data.longitude,
+        county: data.county,
+        subCounty: "Unknown", // Can be updated by admin later
+        geofenceRadius: 500,
+      },
+    });
+  } else {
+    // Optionally update GPS if it was missing
+    if (!school.latitude || !school.longitude) {
+      school = await prisma.school.update({
+        where: { id: school.id },
+        data: {
+          latitude: data.latitude,
+          longitude: data.longitude,
+          address: data.address,
+        },
+      });
+    }
+  }
+
+  // 3. Link student to this school
+  await prisma.student.update({
+    where: { id: student.id },
+    data: { schoolId: school.id },
+  });
+
+  revalidatePath("/student/school");
+  revalidatePath("/admin/schools"); // So admins see the newly added school
+  
+  return { success: true, school };
+}

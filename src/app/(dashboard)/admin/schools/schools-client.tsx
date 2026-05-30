@@ -17,9 +17,12 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Pencil, Trash2, Users, Upload, Download } from "lucide-react";
+import { Plus, Pencil, Trash2, Users, Upload, Download, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { createSchool, updateSchool, deleteSchool, bulkCreateSchools, bulkDeleteSchools } from "../_actions/crud";
+import dynamic from "next/dynamic";
+
+const LocationPicker = dynamic(() => import("./location-picker"), { ssr: false, loading: () => <div className="h-[250px] bg-muted w-full animate-pulse rounded-md mt-2"></div> });
 
 interface SchoolRow {
   id: string;
@@ -29,10 +32,22 @@ interface SchoolRow {
   principal: string | null;
   phone: string | null;
   email: string | null;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  geofenceRadius: number;
+  subjects: string[];
+  zoneId: string | null;
+  zoneName: string | null;
   studentsAssigned: number;
 }
 
-export function SchoolsClient({ schools }: { schools: SchoolRow[] }) {
+interface ZoneOption {
+  id: string;
+  name: string;
+}
+
+export function SchoolsClient({ schools, zones }: { schools: SchoolRow[], zones: ZoneOption[] }) {
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [csvOpen, setCsvOpen] = useState(false);
@@ -46,9 +61,18 @@ export function SchoolsClient({ schools }: { schools: SchoolRow[] }) {
     principal: "",
     phone: "",
     email: "",
+    address: "",
+    latitude: "",
+    longitude: "",
+    geofenceRadius: "500",
+    subjects: "",
+    zoneId: "",
   });
 
-  const resetForm = () => setForm({ name: "", county: "", subCounty: "", principal: "", phone: "", email: "" });
+  const resetForm = () => setForm({ 
+    name: "", county: "", subCounty: "", principal: "", phone: "", email: "", 
+    address: "", latitude: "", longitude: "", geofenceRadius: "500", subjects: "", zoneId: "" 
+  });
 
   const handleAdd = async () => {
     if (!form.name || !form.county || !form.subCounty) {
@@ -64,6 +88,12 @@ export function SchoolsClient({ schools }: { schools: SchoolRow[] }) {
         principal: form.principal || undefined,
         phone: form.phone || undefined,
         email: form.email || undefined,
+        address: form.address || undefined,
+        latitude: form.latitude ? parseFloat(form.latitude) : undefined,
+        longitude: form.longitude ? parseFloat(form.longitude) : undefined,
+        geofenceRadius: parseInt(form.geofenceRadius) || 500,
+        subjects: form.subjects ? form.subjects.split(",").map(s => s.trim()).filter(Boolean) : [],
+        zoneId: form.zoneId || undefined,
       });
       toast.success("School added successfully!");
       setAddOpen(false);
@@ -86,6 +116,12 @@ export function SchoolsClient({ schools }: { schools: SchoolRow[] }) {
         principal: form.principal || undefined,
         phone: form.phone || undefined,
         email: form.email || undefined,
+        address: form.address || undefined,
+        latitude: form.latitude ? parseFloat(form.latitude) : undefined,
+        longitude: form.longitude ? parseFloat(form.longitude) : undefined,
+        geofenceRadius: parseInt(form.geofenceRadius) || 500,
+        subjects: form.subjects ? form.subjects.split(",").map(s => s.trim()).filter(Boolean) : [],
+        zoneId: form.zoneId || undefined,
       });
       toast.success("School updated!");
       setEditOpen(false);
@@ -140,6 +176,7 @@ export function SchoolsClient({ schools }: { schools: SchoolRow[] }) {
       const text = await file.text();
       const lines = text.split("\n").filter((l) => l.trim());
       const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
+      
       const rows = lines.slice(1).map((line) => {
         const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map((v) => v.trim().replace(/^"|"$/g, ""));
         const row: any = {};
@@ -150,6 +187,16 @@ export function SchoolsClient({ schools }: { schools: SchoolRow[] }) {
           if (h === "principal") row.principal = values[i];
           if (h === "phone") row.phone = values[i];
           if (h === "email") row.email = values[i];
+          if (h === "address") row.address = values[i];
+          if (h === "latitude") row.latitude = values[i] ? parseFloat(values[i]) : undefined;
+          if (h === "longitude") row.longitude = values[i] ? parseFloat(values[i]) : undefined;
+          if (h === "subjects") row.subjects = values[i] ? values[i].split(";").map((s: string) => s.trim()) : [];
+          
+          // Match zone by name if provided in CSV
+          if (h === "zone") {
+             const matchedZone = zones.find(z => z.name.toLowerCase() === values[i]?.toLowerCase());
+             if (matchedZone) row.zoneId = matchedZone.id;
+          }
         });
         return row;
       }).filter((r) => r.name && r.county && r.subCounty);
@@ -178,6 +225,12 @@ export function SchoolsClient({ schools }: { schools: SchoolRow[] }) {
       principal: school.principal || "",
       phone: school.phone || "",
       email: school.email || "",
+      address: school.address || "",
+      latitude: school.latitude ? school.latitude.toString() : "",
+      longitude: school.longitude ? school.longitude.toString() : "",
+      geofenceRadius: school.geofenceRadius.toString(),
+      subjects: school.subjects.join(", "),
+      zoneId: school.zoneId || "",
     });
     setEditOpen(true);
   };
@@ -205,15 +258,26 @@ export function SchoolsClient({ schools }: { schools: SchoolRow[] }) {
     {
       accessorKey: "name",
       header: "School Name",
-      cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
+      cell: ({ row }) => (
+        <div>
+          <span className="font-medium">{row.original.name}</span>
+          <div className="flex items-center gap-2 mt-1">
+            {row.original.zoneName && (
+              <Badge variant="outline" className="text-[10px] bg-primary/5 text-primary border-primary/20">
+                {row.original.zoneName}
+              </Badge>
+            )}
+            {row.original.latitude && row.original.longitude && (
+              <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-600 border-emerald-200">
+                <MapPin className="h-3 w-3 mr-1" /> GPS Active
+              </Badge>
+            )}
+          </div>
+        </div>
+      ),
     },
     { accessorKey: "county", header: "County" },
     { accessorKey: "subCounty", header: "Sub-County" },
-    {
-      accessorKey: "principal",
-      header: "Principal",
-      cell: ({ row }) => row.original.principal || "-",
-    },
     {
       accessorKey: "studentsAssigned",
       header: "Students",
@@ -241,11 +305,26 @@ export function SchoolsClient({ schools }: { schools: SchoolRow[] }) {
   ];
 
   const formFields = (
-    <div className="grid gap-4 py-4">
+    <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto px-2">
       <div className="space-y-2">
         <Label>School Name *</Label>
         <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nairobi High School" />
       </div>
+      
+      <div className="space-y-2">
+        <Label>Supervision Zone</Label>
+        <select 
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          value={form.zoneId}
+          onChange={(e) => setForm({ ...form, zoneId: e.target.value })}
+        >
+          <option value="">-- No Zone Assigned --</option>
+          {zones.map(z => (
+            <option key={z.id} value={z.id}>{z.name}</option>
+          ))}
+        </select>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>County *</Label>
@@ -256,19 +335,56 @@ export function SchoolsClient({ schools }: { schools: SchoolRow[] }) {
           <Input value={form.subCounty} onChange={(e) => setForm({ ...form, subCounty: e.target.value })} placeholder="Westlands" />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Principal</Label>
-          <Input value={form.principal} onChange={(e) => setForm({ ...form, principal: e.target.value })} placeholder="Mr. Omondi" />
-        </div>
-        <div className="space-y-2">
-          <Label>Phone</Label>
-          <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="0712345678" />
-        </div>
-      </div>
+
       <div className="space-y-2">
-        <Label>Email</Label>
-        <Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="info@nairobi-high.ac.ke" type="email" />
+        <Label>Teaching Subjects Offered (comma separated)</Label>
+        <Input value={form.subjects} onChange={(e) => setForm({ ...form, subjects: e.target.value })} placeholder="Mathematics, Physics, Chemistry" />
+      </div>
+
+      <div className="pt-2 border-t">
+        <h4 className="text-sm font-semibold mb-2">GPS Location (For Geofencing)</h4>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+          <div className="space-y-2">
+            <Label>Latitude</Label>
+            <Input type="number" step="any" value={form.latitude} onChange={(e) => setForm({ ...form, latitude: e.target.value })} placeholder="-1.286389" />
+          </div>
+          <div className="space-y-2">
+            <Label>Longitude</Label>
+            <Input type="number" step="any" value={form.longitude} onChange={(e) => setForm({ ...form, longitude: e.target.value })} placeholder="36.817223" />
+          </div>
+          <div className="space-y-2 col-span-2 md:col-span-1">
+            <Label>Geofence Radius (m)</Label>
+            <Input type="number" value={form.geofenceRadius} onChange={(e) => setForm({ ...form, geofenceRadius: e.target.value })} placeholder="500" />
+          </div>
+        </div>
+
+        <LocationPicker 
+          lat={form.latitude} 
+          lng={form.longitude} 
+          onChange={(lat, lng) => setForm({ ...form, latitude: lat, longitude: lng })} 
+        />
+      </div>
+
+      <div className="pt-2 border-t">
+        <h4 className="text-sm font-semibold mb-2">Contact Details</h4>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Principal</Label>
+            <Input value={form.principal} onChange={(e) => setForm({ ...form, principal: e.target.value })} placeholder="Mr. Omondi" />
+          </div>
+          <div className="space-y-2">
+            <Label>Phone</Label>
+            <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="0712345678" />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label>Email</Label>
+          <Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="info@nairobi-high.ac.ke" type="email" />
+        </div>
+        <div className="space-y-2">
+          <Label>Physical Address</Label>
+          <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="123 School Lane" />
+        </div>
       </div>
     </div>
   );
@@ -285,7 +401,7 @@ export function SchoolsClient({ schools }: { schools: SchoolRow[] }) {
             School Management
           </h1>
           <p className="text-sm text-muted-foreground mt-2 font-medium">
-            Manage all TP placement schools.
+            Manage all TP placement schools, zones, and GPS coordinates.
           </p>
         </div>
       </div>
@@ -307,10 +423,8 @@ export function SchoolsClient({ schools }: { schools: SchoolRow[] }) {
                 <DialogHeader>
                   <DialogTitle>Import Schools from CSV</DialogTitle>
                   <DialogDescription className="space-y-3">
-                    <p>Upload a CSV with columns: <code className="text-xs bg-muted px-1 py-0.5 rounded">name, county, subCounty, principal, phone, email</code></p>
-                    <a href="/school_template.csv" download className="text-primary text-sm font-medium hover:underline inline-flex items-center gap-1 mt-2">
-                      <Download className="h-3 w-3" /> Download CSV Template
-                    </a>
+                    <p>Upload a CSV with columns: <code className="text-xs bg-muted px-1 py-0.5 rounded">name, county, subCounty, zone, subjects, latitude, longitude, principal, phone, email</code></p>
+                    <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded">Note: Subjects should be separated by semicolons (;) in the CSV.</p>
                   </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleCsvUpload}>
@@ -351,7 +465,7 @@ export function SchoolsClient({ schools }: { schools: SchoolRow[] }) {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Edit School</DialogTitle>
-            <DialogDescription>Update school details.</DialogDescription>
+            <DialogDescription>Update school details, zone, and GPS coordinates.</DialogDescription>
           </DialogHeader>
           {formFields}
           <DialogFooter>

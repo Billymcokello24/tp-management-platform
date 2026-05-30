@@ -2,19 +2,35 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-// Using standard controlled inputs to make the total calculation trivial.
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Save, ArrowLeft } from "lucide-react";
+import { Save, ArrowLeft, MapPin, Loader2, ShieldCheck, ShieldAlert, RefreshCw, WifiOff } from "lucide-react";
 import { submitAssessment } from "../../../_actions/assessments";
+import { useGeolocation } from "@/hooks/use-geolocation";
+import { checkGeofence } from "@/lib/geofence";
 
 export function AssessmentFormClient({ student, lecturerId }: { student: any; lecturerId: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const geo = useGeolocation();
+
+  // Determine geofence status
+  const schoolHasGPS = student.schoolLatitude !== null && student.schoolLongitude !== null;
+  const geofenceResult = (schoolHasGPS && geo.position)
+    ? checkGeofence(
+        geo.position.latitude,
+        geo.position.longitude,
+        student.schoolLatitude,
+        student.schoolLongitude,
+        student.schoolGeofenceRadius
+      )
+    : null;
+
+  const canAssess = schoolHasGPS && geofenceResult?.isInside;
 
   const [marks, setMarks] = useState({
     schemeOfWorkMark: 0,
@@ -65,19 +81,54 @@ export function AssessmentFormClient({ student, lecturerId }: { student: any; le
       return;
     }
 
+    // Build GPS verification data
+    let gpsData: {
+      submissionLatitude?: number;
+      submissionLongitude?: number;
+      isGeoVerified: boolean;
+      geoVerificationNote: string;
+    } = {
+      isGeoVerified: false,
+      geoVerificationNote: "No GPS data available",
+    };
+
+    if (geo.position) {
+      gpsData.submissionLatitude = geo.position.latitude;
+      gpsData.submissionLongitude = geo.position.longitude;
+
+      const locLabel = geo.position.locationName || `${geo.position.latitude.toFixed(5)}, ${geo.position.longitude.toFixed(5)}`;
+
+      if (geofenceResult) {
+        gpsData.isGeoVerified = geofenceResult.isInside;
+        gpsData.geoVerificationNote = geofenceResult.isInside
+          ? `Verified at ${locLabel} — ${geofenceResult.distanceFormatted} from school (within ${student.schoolGeofenceRadius}m radius). Accuracy: ${Math.round(geo.position.accuracy)}m.`
+          : `Outside geofence at ${locLabel} — ${geofenceResult.distanceFormatted} from school (${student.schoolGeofenceRadius}m radius). Accuracy: ${Math.round(geo.position.accuracy)}m.`;
+      } else {
+        gpsData.geoVerificationNote = `Location: ${locLabel}. School has no GPS coordinates configured.`;
+      }
+    } else if (geo.error) {
+      gpsData.geoVerificationNote = `GPS error: ${geo.error}`;
+    }
+
+    // POLICY: NO STRICT LOCK - Lecturer can assess anywhere, but GPS is still recorded.
+    if (schoolHasGPS && geofenceResult && !geofenceResult.isInside) {
+      toast.warning(`Note: You appear to be outside the ${student.schoolGeofenceRadius}m geofence. Your location will be recorded as outside.`);
+    }
+
     setLoading(true);
     try {
       const payload = {
         studentId: student.id,
         lecturerId,
         ...marks,
-        ...comments
+        ...comments,
+        ...gpsData,
       };
       
       const res = await submitAssessment(payload);
       if (res.success) {
         toast.success("Assessment submitted successfully!");
-        router.push(`/lecturer/assessments/${res.id}`); // redirect to view the PDF
+        router.push(`/lecturer/assessments/${res.id}`);
       }
     } catch (error: any) {
       toast.error(error.message || "Failed to submit assessment");
@@ -123,7 +174,83 @@ export function AssessmentFormClient({ student, lecturerId }: { student: any; le
         <div><span className="font-semibold text-muted-foreground text-sm">Course:</span> {student.course}</div>
       </div>
 
-      <Card>
+      {/* ── GPS / Geofence Status Card ── */}
+      <Card className="border-2 border-dashed">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <MapPin className="h-4 w-4" />
+            Location Verification
+          </CardTitle>
+          <CardDescription className="text-xs">
+            Your GPS location is recorded for accountability and audit purposes.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {geo.loading ? (
+            <div className="flex items-center gap-3 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-sm">Acquiring GPS signal...</span>
+            </div>
+          ) : geo.error ? (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3 text-amber-600">
+                <WifiOff className="h-4 w-4" />
+                <div>
+                  <p className="text-sm font-medium">GPS Unavailable</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{geo.error}</p>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" onClick={geo.refresh}>
+                <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry
+              </Button>
+            </div>
+          ) : geo.position ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <MapPin className="h-3.5 w-3.5" />
+                  <span className="font-medium text-foreground">{geo.position.locationName || "Resolving location..."}</span>
+                  <span className="text-[10px] font-mono ml-1">({geo.position.latitude.toFixed(4)}, {geo.position.longitude.toFixed(4)}) ±{Math.round(geo.position.accuracy)}m</span>
+                </div>
+                <Button variant="ghost" size="sm" onClick={geo.refresh} className="h-7 px-2">
+                  <RefreshCw className="h-3 w-3" />
+                </Button>
+              </div>
+
+              {schoolHasGPS && geofenceResult ? (
+                geofenceResult.isInside ? (
+                  <div className="flex items-center gap-3 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 px-4 py-3 rounded-xl border border-emerald-200 dark:border-emerald-800">
+                    <ShieldCheck className="h-5 w-5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold">Location Verified</p>
+                      <p className="text-xs opacity-80 mt-0.5">You are {geofenceResult.distanceFormatted} from {student.schoolName} (within {student.schoolGeofenceRadius}m radius).</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 px-4 py-3 rounded-xl border border-amber-200 dark:border-amber-800">
+                    <ShieldAlert className="h-5 w-5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold">Outside School Geofence</p>
+                      <p className="text-xs opacity-80 mt-0.5">You are {geofenceResult.distanceFormatted} away from {student.schoolName}. Submission will be flagged for review.</p>
+                    </div>
+                  </div>
+                )
+              ) : !schoolHasGPS ? (
+                <div className="flex items-center gap-3 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 px-4 py-3 rounded-xl border border-blue-200 dark:border-blue-800">
+                  <MapPin className="h-5 w-5 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold">GPS Captured</p>
+                    <p className="text-xs opacity-80 mt-0.5">School GPS coordinates not yet configured. Your location is still recorded for records.</p>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <div className="transition-all duration-300">
+        <Card>
         <CardHeader className="bg-muted/30 border-b border-border/50">
           <CardTitle>A. Preparation (12 Marks)</CardTitle>
         </CardHeader>
@@ -232,6 +359,7 @@ export function AssessmentFormClient({ student, lecturerId }: { student: any; le
           </div>
         </CardContent>
       </Card>
+      </div>
 
       <div className="sticky bottom-0 bg-background/80 backdrop-blur-md border-t p-4 -mx-6 px-6 sm:-mx-8 sm:px-8 mt-8 flex items-center justify-between z-10">
         <div>
@@ -240,9 +368,22 @@ export function AssessmentFormClient({ student, lecturerId }: { student: any; le
             {totalMarks} <span className="text-xl text-muted-foreground font-normal">/ 100</span>
           </p>
         </div>
-        <Button size="lg" onClick={handleSubmit} disabled={loading} className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-sm font-semibold">
-          {loading ? "Submitting..." : <><Save className="h-4 w-4 mr-2" /> Submit Final Assessment</>}
-        </Button>
+        <div className="flex items-center gap-3">
+          {/* Geofence micro-badge in the submit bar */}
+          {geo.position && geofenceResult && (
+            <div className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
+              geofenceResult.isInside 
+                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400" 
+                : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
+            }`}>
+              {geofenceResult.isInside ? <ShieldCheck className="h-3.5 w-3.5" /> : <ShieldAlert className="h-3.5 w-3.5" />}
+              {geofenceResult.distanceFormatted}
+            </div>
+          )}
+          <Button size="lg" onClick={handleSubmit} disabled={loading} className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-sm font-semibold">
+            {loading ? "Submitting..." : <><Save className="h-4 w-4 mr-2" /> Submit Final Assessment</>}
+          </Button>
+        </div>
       </div>
     </div>
   );

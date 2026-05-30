@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Upload, Pencil, Trash2, Users, Download } from "lucide-react";
+import { Plus, Upload, Pencil, Trash2, Users, Download, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { createLecturer, updateLecturer, deleteLecturer, bulkCreateLecturers, bulkDeleteLecturers } from "../_actions/crud";
 
@@ -28,13 +28,19 @@ interface Lecturer {
   phone: string | null;
   department: string;
   zone: string | null;
+  zoneId: string | null;
   county: string | null;
   assignedStudents: number;
   assessmentsDone: number;
   assessmentsPending: number;
 }
 
-export function LecturersClient({ lecturers }: { lecturers: Lecturer[] }) {
+interface ZoneOption {
+  id: string;
+  name: string;
+}
+
+export function LecturersClient({ lecturers, zones }: { lecturers: Lecturer[], zones: ZoneOption[] }) {
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [csvOpen, setCsvOpen] = useState(false);
@@ -46,12 +52,13 @@ export function LecturersClient({ lecturers }: { lecturers: Lecturer[] }) {
     email: "",
     phone: "",
     department: "",
-    zone: "",
+    zone: "", // fallback
+    zoneId: "",
     county: "",
     password: "",
   });
 
-  const resetForm = () => setForm({ name: "", email: "", phone: "", department: "", zone: "", county: "", password: "" });
+  const resetForm = () => setForm({ name: "", email: "", phone: "", department: "", zone: "", zoneId: "", county: "", password: "" });
 
   const handleAdd = async () => {
     if (!form.name || !form.email || !form.department) {
@@ -66,6 +73,7 @@ export function LecturersClient({ lecturers }: { lecturers: Lecturer[] }) {
         phone: form.phone || undefined,
         department: form.department,
         zone: form.zone || undefined,
+        zoneId: form.zoneId || undefined,
         county: form.county || undefined,
         password: form.password || undefined,
       });
@@ -89,6 +97,7 @@ export function LecturersClient({ lecturers }: { lecturers: Lecturer[] }) {
         phone: form.phone || undefined,
         department: form.department,
         zone: form.zone || undefined,
+        zoneId: form.zoneId || undefined,
         county: form.county || undefined,
         password: form.password || undefined,
       });
@@ -134,6 +143,7 @@ export function LecturersClient({ lecturers }: { lecturers: Lecturer[] }) {
       phone: lecturer.phone || "",
       department: lecturer.department,
       zone: lecturer.zone || "",
+      zoneId: lecturer.zoneId || "",
       county: lecturer.county || "",
       password: "", // Don't pre-fill password on edit
     });
@@ -158,7 +168,12 @@ export function LecturersClient({ lecturers }: { lecturers: Lecturer[] }) {
           if (h === "name") row.name = values[i];
           if (h === "email") row.email = values[i];
           if (h === "department") row.department = values[i];
-          if (h === "zone") row.zone = values[i];
+          if (h === "zone") {
+             row.zone = values[i];
+             // Try to match zone by name
+             const matchedZone = zones.find(z => z.name.toLowerCase() === values[i]?.toLowerCase());
+             if (matchedZone) row.zoneId = matchedZone.id;
+          }
           if (h === "county") row.county = values[i];
           if (h === "phone") row.phone = values[i];
           if (h === "password") row.password = values[i];
@@ -241,7 +256,12 @@ export function LecturersClient({ lecturers }: { lecturers: Lecturer[] }) {
     {
       accessorKey: "zone",
       header: "Zone",
-      cell: ({ row }) => row.original.zone || "-",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-1">
+          {row.original.zoneId && <MapPin className="h-3.5 w-3.5 text-primary" />}
+          <span>{row.original.zone || "-"}</span>
+        </div>
+      ),
     },
     {
       accessorKey: "county",
@@ -265,7 +285,7 @@ export function LecturersClient({ lecturers }: { lecturers: Lecturer[] }) {
   ];
 
   const formFields = (
-    <div className="grid gap-4 py-4">
+    <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto px-2">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Full Name *</Label>
@@ -288,15 +308,24 @@ export function LecturersClient({ lecturers }: { lecturers: Lecturer[] }) {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label>Zone</Label>
-          <Input value={form.zone} onChange={(e) => setForm({ ...form, zone: e.target.value })} placeholder="Nairobi" />
+          <Label>Supervision Zone</Label>
+          <select 
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            value={form.zoneId}
+            onChange={(e) => setForm({ ...form, zoneId: e.target.value })}
+          >
+            <option value="">-- No Zone Assigned --</option>
+            {zones.map(z => (
+              <option key={z.id} value={z.id}>{z.name}</option>
+            ))}
+          </select>
         </div>
         <div className="space-y-2">
           <Label>County</Label>
           <Input value={form.county} onChange={(e) => setForm({ ...form, county: e.target.value })} placeholder="Nairobi" />
         </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4">
         <div className="space-y-2">
           <Label>Password</Label>
           <Input value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Default: password123" />
@@ -317,7 +346,7 @@ export function LecturersClient({ lecturers }: { lecturers: Lecturer[] }) {
             Lecturer Management
           </h1>
           <p className="text-sm text-muted-foreground mt-2 font-medium">
-            Manage all TP supervisors and their workloads.
+            Manage all TP supervisors, their zones, and workloads.
           </p>
         </div>
       </div>
@@ -383,7 +412,7 @@ export function LecturersClient({ lecturers }: { lecturers: Lecturer[] }) {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Edit Lecturer</DialogTitle>
-            <DialogDescription>Update lecturer details.</DialogDescription>
+            <DialogDescription>Update lecturer details and supervision zone.</DialogDescription>
           </DialogHeader>
           {formFields}
           <DialogFooter>

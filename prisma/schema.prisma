@@ -116,12 +116,13 @@ model Student {
   schoolId        String?
   assignmentId    String?
 
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  school       School?       @relation(fields: [schoolId], references: [id])
-  assignment   Assignment?   @relation(fields: [assignmentId], references: [id], onDelete: SetNull)
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school       School?            @relation(fields: [schoolId], references: [id])
+  assignment   Assignment?        @relation(fields: [assignmentId], references: [id], onDelete: SetNull)
   lessonPlans  LessonPlan[]
   schemesOfWork SchemeOfWork[]
   assessments  Assessment[]
+  visits       SupervisionVisit[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -138,30 +139,61 @@ model Lecturer {
   department String
   zone       String?
   county     String?
+  zoneId     String?
 
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  zoneRef     Zone?              @relation(fields: [zoneId], references: [id])
   assignments Assignment[]
   assessments Assessment[]
+  visits      SupervisionVisit[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([zoneId])
+}
+
+// ── Zone ───────────────────────────────────────────
+
+model Zone {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  county      String
+  description String?
+  isActive    Boolean  @default(true)
+
+  schools     School[]
+  lecturers   Lecturer[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 // ── School ─────────────────────────────────────────
 
 model School {
-  id        String  @id @default(cuid())
-  name      String
-  county    String
-  subCounty String
-  principal String?
-  phone     String?
-  email     String?
+  id             String  @id @default(cuid())
+  name           String
+  county         String
+  subCounty      String
+  principal      String?
+  phone          String?
+  email          String?
+  address        String?
+  latitude       Float?
+  longitude      Float?
+  geofenceRadius Int     @default(500)
+  subjects       String[]
+  zoneId         String?
 
+  zone     Zone?              @relation(fields: [zoneId], references: [id])
   students Student[]
+  visits   SupervisionVisit[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([zoneId])
 }
 
 // ── Assignment (Lecturer ↔ Students) ───────────────
@@ -244,8 +276,15 @@ model Assessment {
   areasOfStrength    String? @db.Text
   areasOfImprovement String? @db.Text
 
-  student  Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  lecturer Lecturer @relation(fields: [lecturerId], references: [id], onDelete: Cascade)
+  // GPS verification
+  submissionLatitude  Float?
+  submissionLongitude Float?
+  isGeoVerified       Boolean @default(false)
+  geoVerificationNote String?
+
+  student  Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lecturer Lecturer          @relation(fields: [lecturerId], references: [id], onDelete: Cascade)
+  visit    SupervisionVisit?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -331,4 +370,34 @@ model Notification {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+// ── Supervision Visit Log ──────────────────────────
+
+model SupervisionVisit {
+  id           String    @id @default(cuid())
+  lecturerId   String
+  studentId    String
+  schoolId     String
+  assessmentId String?   @unique
+
+  checkInTime       DateTime
+  checkOutTime      DateTime?
+  checkInLatitude   Float
+  checkInLongitude  Float
+  checkOutLatitude  Float?
+  checkOutLongitude Float?
+  durationMinutes   Int?
+  notes             String?
+
+  lecturer   Lecturer    @relation(fields: [lecturerId], references: [id], onDelete: Cascade)
+  student    Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  school     School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  assessment Assessment? @relation(fields: [assessmentId], references: [id])
+
+  createdAt  DateTime @default(now())
+
+  @@index([lecturerId])
+  @@index([studentId])
+  @@index([schoolId])
 }

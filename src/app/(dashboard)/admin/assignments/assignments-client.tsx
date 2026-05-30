@@ -16,7 +16,9 @@ interface AssignmentRow {
   course: string;
   schoolName: string;
   schoolCounty: string;
+  schoolZone: string | null;
   lecturerName: string;
+  lecturerZone: string | null;
   assignmentLocked: boolean;
 }
 
@@ -88,7 +90,7 @@ export function AssignmentsClient({
         <div>
           <p className="text-sm">{row.original.schoolName}</p>
           <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-            <MapPin className="h-3 w-3" /> {row.original.schoolCounty}
+            <MapPin className="h-3 w-3" /> {row.original.schoolZone || "Unzoned"} • {row.original.schoolCounty}
           </div>
         </div>
       ),
@@ -96,7 +98,14 @@ export function AssignmentsClient({
     {
       accessorKey: "lecturerName",
       header: "Assigned Lecturer",
-      cell: ({ row }) => <span className="font-medium text-primary dark:text-primary">{row.original.lecturerName}</span>,
+      cell: ({ row }) => (
+        <div>
+          <span className="font-medium text-primary dark:text-primary">{row.original.lecturerName}</span>
+          {row.original.lecturerZone && (
+            <p className="text-xs text-muted-foreground mt-0.5">Zone: {row.original.lecturerZone}</p>
+          )}
+        </div>
+      ),
     },
   ];
 
@@ -109,10 +118,10 @@ export function AssignmentsClient({
             <span className="text-xs font-bold uppercase tracking-widest text-primary">Allocation Engine</span>
           </div>
           <h1 className="text-4xl font-extrabold tracking-tight text-foreground">
-            Assignment Engine
+            Zone-Aware Assignment Engine
           </h1>
           <p className="text-sm text-muted-foreground mt-2 font-medium">
-            Randomly allocate students to lecturers for Teaching Practice supervision.
+            Smartly allocate students to lecturers based on their supervision zones.
           </p>
         </div>
       </div>
@@ -155,8 +164,8 @@ export function AssignmentsClient({
 
       <Card className="border-primary/20 shadow-sm">
         <CardHeader className="bg-primary/5 border-b">
-          <CardTitle>Allocation Controls</CardTitle>
-          <CardDescription>Use the Fisher-Yates shuffle algorithm to evenly distribute unassigned students to available lecturers.</CardDescription>
+          <CardTitle>Smart Allocation Controls</CardTitle>
+          <CardDescription>Group students by zone and distribute to lecturers assigned to the same zone (fallback to least loaded lecturer for unzoned students).</CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
           <div className="flex flex-wrap items-center gap-4">

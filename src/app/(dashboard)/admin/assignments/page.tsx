@@ -14,7 +14,9 @@ export default async function AssignmentsPage() {
     course: s.course,
     schoolName: s.school?.name || "Unassigned",
     schoolCounty: s.school?.county || "N/A",
+    schoolZone: s.school?.zone?.name || null,
     lecturerName: s.assignment?.lecturer?.user?.name || "Unknown",
+    lecturerZone: s.assignment?.lecturer?.zoneRef?.name || null,
     assignmentLocked: s.assignment?.isLocked || false,
   }));
 

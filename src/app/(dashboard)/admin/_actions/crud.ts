@@ -193,6 +193,7 @@ export async function getLecturers() {
   return prisma.lecturer.findMany({
     include: {
       user: { select: { id: true, name: true, email: true, phone: true } },
+      zoneRef: true,
       assignments: {
         include: { students: true },
       },
@@ -209,6 +210,7 @@ export async function createLecturer(data: {
   department: string;
   zone?: string;
   county?: string;
+  zoneId?: string;
   password?: string;
 }) {
   const passwordHash = await bcryptjs.hash(data.password || "password123", 10);
@@ -225,6 +227,7 @@ export async function createLecturer(data: {
           department: data.department,
           zone: data.zone || null,
           county: data.county || null,
+          zoneId: data.zoneId || null,
         },
       },
     },
@@ -243,6 +246,7 @@ export async function updateLecturer(
     department: string;
     zone?: string;
     county?: string;
+    zoneId?: string;
     password?: string;
   }
 ) {
@@ -269,6 +273,7 @@ export async function updateLecturer(
         department: data.department,
         zone: data.zone || null,
         county: data.county || null,
+        zoneId: data.zoneId || null,
       },
     }),
   ]);
@@ -305,7 +310,7 @@ export async function bulkDeleteLecturers(lecturerIds: string[]) {
 }
 
 export async function bulkCreateLecturers(
-  rows: { name: string; email: string; department: string; zone?: string; county?: string; phone?: string; password?: string }[]
+  rows: { name: string; email: string; department: string; zone?: string; county?: string; zoneId?: string; phone?: string; password?: string }[]
 ) {
   const defaultPasswordHash = await bcryptjs.hash("password123", 10);
   let created = 0;
@@ -335,6 +340,7 @@ export async function bulkCreateLecturers(
               department: row.department,
               zone: row.zone || null,
               county: row.county || null,
+              zoneId: row.zoneId || null,
             },
           },
         },
@@ -356,6 +362,7 @@ export async function getSchools() {
   return prisma.school.findMany({
     include: {
       students: true,
+      zone: true,
     },
     orderBy: { name: "asc" },
   });
@@ -368,6 +375,12 @@ export async function createSchool(data: {
   principal?: string;
   phone?: string;
   email?: string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
+  geofenceRadius?: number;
+  subjects?: string[];
+  zoneId?: string;
 }) {
   await prisma.school.create({ data });
 
@@ -384,6 +397,12 @@ export async function updateSchool(
     principal?: string;
     phone?: string;
     email?: string;
+    address?: string;
+    latitude?: number;
+    longitude?: number;
+    geofenceRadius?: number;
+    subjects?: string[];
+    zoneId?: string;
   }
 ) {
   await prisma.school.update({
@@ -409,7 +428,20 @@ export async function bulkDeleteSchools(schoolIds: string[]) {
 }
 
 export async function bulkCreateSchools(
-  rows: { name: string; county: string; subCounty: string; principal?: string; phone?: string; email?: string }[]
+  rows: { 
+    name: string; 
+    county: string; 
+    subCounty: string; 
+    principal?: string; 
+    phone?: string; 
+    email?: string;
+    address?: string;
+    latitude?: number;
+    longitude?: number;
+    geofenceRadius?: number;
+    subjects?: string[];
+    zoneId?: string;
+  }[]
 ) {
   let created = 0;
   let skipped = 0;
@@ -433,6 +465,12 @@ export async function bulkCreateSchools(
           principal: row.principal || null,
           phone: row.phone || null,
           email: row.email || null,
+          address: row.address || null,
+          latitude: row.latitude || null,
+          longitude: row.longitude || null,
+          geofenceRadius: row.geofenceRadius || 500,
+          subjects: row.subjects || [],
+          zoneId: row.zoneId || null,
         },
       });
       created++;
@@ -442,6 +480,132 @@ export async function bulkCreateSchools(
   }
 
   revalidatePath("/admin/schools");
+  revalidatePath("/admin/dashboard");
+  return { created, skipped };
+}
+
+// ── Zones ────────────────────────────────────────
+
+export async function getZones() {
+  return prisma.zone.findMany({
+    include: {
+      _count: {
+        select: { schools: true, lecturers: true }
+      }
+    },
+    orderBy: { name: "asc" },
+  });
+}
+
+export async function createZone(data: {
+  name: string;
+  county: string;
+  description?: string;
+  isActive?: boolean;
+}) {
+  await prisma.zone.create({ data });
+
+  revalidatePath("/admin/zones");
+  revalidatePath("/admin/dashboard");
+}
+
+export async function updateZone(
+  zoneId: string,
+  data: {
+    name: string;
+    county: string;
+    description?: string;
+    isActive?: boolean;
+  }
+) {
+  await prisma.zone.update({
+    where: { id: zoneId },
+    data,
+  });
+
+  revalidatePath("/admin/zones");
+  revalidatePath("/admin/dashboard");
+}
+
+export async function deleteZone(zoneId: string) {
+  const zone = await prisma.zone.findUnique({
+    where: { id: zoneId },
+    include: {
+      _count: {
+        select: { schools: true, lecturers: true }
+      }
+    }
+  });
+
+  if (!zone) throw new Error("Zone not found");
+
+  if (zone._count.schools > 0 || zone._count.lecturers > 0) {
+    throw new Error("Cannot delete a zone with assigned schools or lecturers.");
+  }
+
+  await prisma.zone.delete({ where: { id: zoneId } });
+
+  revalidatePath("/admin/zones");
+  revalidatePath("/admin/dashboard");
+}
+
+export async function bulkDeleteZones(zoneIds: string[]) {
+  const zones = await prisma.zone.findMany({
+    where: { id: { in: zoneIds } },
+    include: {
+      _count: {
+        select: { schools: true, lecturers: true }
+      }
+    }
+  });
+
+  const safeToDelete = zones
+    .filter(z => z._count.schools === 0 && z._count.lecturers === 0)
+    .map(z => z.id);
+
+  if (safeToDelete.length === 0) {
+    throw new Error("None of the selected zones can be deleted because they have assigned schools or lecturers.");
+  }
+
+  await prisma.zone.deleteMany({ where: { id: { in: safeToDelete } } });
+  
+  revalidatePath("/admin/zones");
+  revalidatePath("/admin/dashboard");
+  
+  return { deleted: safeToDelete.length, skipped: zoneIds.length - safeToDelete.length };
+}
+
+export async function bulkCreateZones(
+  rows: { name: string; county: string; description?: string }[]
+) {
+  let created = 0;
+  let skipped = 0;
+
+  for (const row of rows) {
+    const existing = await prisma.zone.findFirst({
+      where: { name: { equals: row.name, mode: "insensitive" } },
+    });
+
+    if (existing) {
+      skipped++;
+      continue;
+    }
+
+    try {
+      await prisma.zone.create({
+        data: {
+          name: row.name,
+          county: row.county,
+          description: row.description || null,
+        },
+      });
+      created++;
+    } catch {
+      skipped++;
+    }
+  }
+
+  revalidatePath("/admin/zones");
   revalidatePath("/admin/dashboard");
   return { created, skipped };
 }

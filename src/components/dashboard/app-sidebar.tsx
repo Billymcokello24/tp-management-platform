@@ -60,6 +60,7 @@ export function AppSidebar() {
             { title: "Students", href: "/admin/students", icon: Users },
             { title: "Lecturers", href: "/admin/lecturers", icon: BookOpen },
             { title: "Schools", href: "/admin/schools", icon: School },
+            { title: "Zones", href: "/admin/zones", icon: MapPin },
             { title: "Assignments", href: "/admin/assignments", icon: Shuffle },
             { title: "Assessments", href: "/admin/assessments", icon: ClipboardCheck },
           ],

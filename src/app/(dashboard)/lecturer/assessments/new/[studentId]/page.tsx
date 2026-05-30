@@ -17,7 +17,10 @@ export default async function NewAssessmentPage({ params }: PageProps) {
       name: student.user.name,
       admissionNumber: student.admissionNumber,
       course: student.course,
-      schoolName: student.school?.name || "N/A"
+      schoolName: student.school?.name || "N/A",
+      schoolLatitude: student.school?.latitude ?? null,
+      schoolLongitude: student.school?.longitude ?? null,
+      schoolGeofenceRadius: student.school?.geofenceRadius ?? 500,
     };
 
     return <AssessmentFormClient student={serializedStudent} lecturerId={lecturerId} />;

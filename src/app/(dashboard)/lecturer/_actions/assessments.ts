@@ -20,7 +20,7 @@ export async function getStudentForAssessment(studentId: string) {
     where: { id: studentId },
     include: {
       user: { select: { name: true, email: true } },
-      school: { select: { name: true } },
+      school: { select: { name: true, latitude: true, longitude: true, geofenceRadius: true } },
     }
   });
 
@@ -102,6 +102,11 @@ export async function submitAssessment(data: any) {
       generalComments: data.generalComments,
       areasOfStrength: data.areasOfStrength,
       areasOfImprovement: data.areasOfImprovement,
+      // GPS verification
+      submissionLatitude: data.submissionLatitude ?? null,
+      submissionLongitude: data.submissionLongitude ?? null,
+      isGeoVerified: data.isGeoVerified ?? false,
+      geoVerificationNote: data.geoVerificationNote ?? null,
     }
   });
 
