@@ -298,7 +298,6 @@ export function AssessmentDetailClient({ assessment }: { assessment: any }) {
           <SectionTitle title="4. QUALITATIVE REMARKS & VERIFICATION" isPdf={isPdf} />
           <div style={{ marginBottom: isPdf ? "20px" : "35px" }}>
             <RemarkBlock label="AREAS OF STRENGTH" content={assessment.areasOfStrength} isPdf={isPdf} />
-            <RemarkBlock label="AREAS OF IMPROVEMENT" content={assessment.areasOfImprovement} isPdf={isPdf} />
             
             <div style={{ border: "1px solid #f3e8ff", background: "#faf5ff", padding: isPdf ? "10px" : "12px 16px", marginBottom: "10px" }}>
               <div style={{ fontSize: isPdf ? "8px" : "9px", fontWeight: "bold", color: "#6b21a8", letterSpacing: "1px", textTransform: "uppercase", marginBottom: "6px" }}>GEOSPATIAL VERIFICATION RECORD</div>

@@ -27,6 +27,7 @@ import {
 import { Plus, Upload, Pencil, Trash2, Download } from "lucide-react";
 import { toast } from "sonner";
 import { createStudent, updateStudent, deleteStudent, bulkCreateStudents, bulkDeleteStudents } from "../_actions/crud";
+import { useConfirm } from "@/hooks/use-confirm";
 
 interface Student {
   id: string;
@@ -57,6 +58,7 @@ const statusColors: Record<string, string> = {
 };
 
 export function StudentsClient({ students, schools }: { students: Student[]; schools: SchoolOption[] }) {
+  const [ConfirmModal, confirm] = useConfirm();
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [csvOpen, setCsvOpen] = useState(false);
@@ -126,7 +128,8 @@ export function StudentsClient({ students, schools }: { students: Student[]; sch
   };
 
   const handleDelete = async (student: Student) => {
-    if (!confirm(`Are you sure you want to delete ${student.name}?`)) return;
+    const ok = await confirm(`Delete ${student.name}?`, `Are you sure you want to delete ${student.name}? This action cannot be undone.`);
+    if (!ok) return;
     try {
       await deleteStudent(student.id);
       toast.success("Student deleted.");
@@ -136,7 +139,8 @@ export function StudentsClient({ students, schools }: { students: Student[]; sch
   };
 
   const handleBulkDelete = async (selected: Student[]) => {
-    if (!confirm(`Are you sure you want to delete ${selected.length} students?`)) return;
+    const ok = await confirm("Bulk Delete", `Are you sure you want to delete ${selected.length} students?`);
+    if (!ok) return;
     setLoading(true);
     try {
       await bulkDeleteStudents(selected.map((s) => s.id));
@@ -416,6 +420,7 @@ export function StudentsClient({ students, schools }: { students: Student[]; sch
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmModal />
     </div>
   );
 }

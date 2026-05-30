@@ -210,6 +210,9 @@ export async function createLecturer(data: {
   department: string;
   zone?: string;
   county?: string;
+  subCounty?: string;
+  ward?: string;
+  village?: string;
   zoneId?: string;
   password?: string;
 }) {
@@ -227,6 +230,9 @@ export async function createLecturer(data: {
           department: data.department,
           zone: data.zone || null,
           county: data.county || null,
+          subCounty: data.subCounty || null,
+          ward: data.ward || null,
+          village: data.village || null,
           zoneId: data.zoneId || null,
         },
       },
@@ -246,6 +252,9 @@ export async function updateLecturer(
     department: string;
     zone?: string;
     county?: string;
+    subCounty?: string;
+    ward?: string;
+    village?: string;
     zoneId?: string;
     password?: string;
   }
@@ -273,6 +282,9 @@ export async function updateLecturer(
         department: data.department,
         zone: data.zone || null,
         county: data.county || null,
+        subCounty: data.subCounty || null,
+        ward: data.ward || null,
+        village: data.village || null,
         zoneId: data.zoneId || null,
       },
     }),
@@ -372,6 +384,8 @@ export async function createSchool(data: {
   name: string;
   county: string;
   subCounty: string;
+  ward?: string;
+  village?: string;
   principal?: string;
   phone?: string;
   email?: string;
@@ -394,6 +408,8 @@ export async function updateSchool(
     name: string;
     county: string;
     subCounty: string;
+    ward?: string;
+    village?: string;
     principal?: string;
     phone?: string;
     email?: string;
@@ -500,6 +516,9 @@ export async function getZones() {
 export async function createZone(data: {
   name: string;
   county: string;
+  subCounty?: string;
+  ward?: string;
+  village?: string;
   description?: string;
   isActive?: boolean;
 }) {
@@ -514,6 +533,9 @@ export async function updateZone(
   data: {
     name: string;
     county: string;
+    subCounty?: string;
+    ward?: string;
+    village?: string;
     description?: string;
     isActive?: boolean;
   }

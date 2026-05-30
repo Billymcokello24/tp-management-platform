@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Trash2, Plus, Upload, Save, FileSpreadsheet, Eye, ChevronDown, ChevronUp, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { saveSchemeOfWork, deleteSchemeOfWork } from "../_actions/schemes";
+import { useConfirm } from "@/hooks/use-confirm";
 
 interface SchemeRow {
   week: string;
@@ -25,6 +26,7 @@ interface SchemeRow {
 const EMPTY_ROW: SchemeRow = { week: "", lesson: "", topic: "", subTopic: "", objectives: "", activities: "", resources: "", remarks: "" };
 
 export function SchemesClient({ initialSchemes }: { initialSchemes: any[] }) {
+  const [ConfirmModal, confirm] = useConfirm();
   const [schemes, setSchemes] = useState(initialSchemes);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -121,7 +123,8 @@ export function SchemesClient({ initialSchemes }: { initialSchemes: any[] }) {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this scheme?")) return;
+    const ok = await confirm("Delete Scheme", "Are you sure you want to delete this scheme?");
+    if (!ok) return;
     try {
       await deleteSchemeOfWork(id);
       setSchemes(schemes.filter(s => s.id !== id));
@@ -392,6 +395,7 @@ export function SchemesClient({ initialSchemes }: { initialSchemes: any[] }) {
           )}
         </CardContent>
       </Card>
+      <ConfirmModal />
     </div>
   );
 }

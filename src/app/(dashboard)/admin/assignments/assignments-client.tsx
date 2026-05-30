@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Shuffle, RotateCcw, AlertTriangle, Users, MapPin, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { generateRandomAssignments, resetAssignments } from "../_actions/assignments";
+import { useConfirm } from "@/hooks/use-confirm";
 
 interface AssignmentRow {
   studentId: string;
@@ -29,6 +30,7 @@ export function AssignmentsClient({
   assignments: AssignmentRow[];
   stats: { total: number; assigned: number; unassigned: number };
 }) {
+  const [ConfirmModal, confirm] = useConfirm();
   const [loading, setLoading] = useState(false);
 
   const handleGenerate = async () => {
@@ -54,9 +56,8 @@ export function AssignmentsClient({
   const handleReset = async () => {
     if (stats.assigned === 0) return;
     
-    if (!confirm("WARNING: This will clear all current unlocked assignments. Are you sure you want to reset?")) {
-      return;
-    }
+    const ok = await confirm("Reset Assignments", "WARNING: This will clear all current unlocked assignments. Are you sure you want to reset?");
+    if (!ok) return;
 
     setLoading(true);
     try {
@@ -199,6 +200,7 @@ export function AssignmentsClient({
           searchPlaceholder="Search assignments by student..."
         />
       </div>
+      <ConfirmModal />
     </div>
   );
 }

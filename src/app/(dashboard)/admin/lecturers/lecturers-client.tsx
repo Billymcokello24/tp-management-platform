@@ -20,6 +20,8 @@ import { Label } from "@/components/ui/label";
 import { Plus, Upload, Pencil, Trash2, Users, Download, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { createLecturer, updateLecturer, deleteLecturer, bulkCreateLecturers, bulkDeleteLecturers } from "../_actions/crud";
+import { useConfirm } from "@/hooks/use-confirm";
+import { KenyaLocationPicker } from "@/components/shared/kenya-location-picker";
 
 interface Lecturer {
   id: string;
@@ -41,6 +43,7 @@ interface ZoneOption {
 }
 
 export function LecturersClient({ lecturers, zones }: { lecturers: Lecturer[], zones: ZoneOption[] }) {
+  const [ConfirmModal, confirm] = useConfirm();
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [csvOpen, setCsvOpen] = useState(false);
@@ -55,10 +58,13 @@ export function LecturersClient({ lecturers, zones }: { lecturers: Lecturer[], z
     zone: "", // fallback
     zoneId: "",
     county: "",
+    subCounty: "",
+    ward: "",
+    village: "",
     password: "",
   });
 
-  const resetForm = () => setForm({ name: "", email: "", phone: "", department: "", zone: "", zoneId: "", county: "", password: "" });
+  const resetForm = () => setForm({ name: "", email: "", phone: "", department: "", zone: "", zoneId: "", county: "", subCounty: "", ward: "", village: "", password: "" });
 
   const handleAdd = async () => {
     if (!form.name || !form.email || !form.department) {
@@ -75,6 +81,9 @@ export function LecturersClient({ lecturers, zones }: { lecturers: Lecturer[], z
         zone: form.zone || undefined,
         zoneId: form.zoneId || undefined,
         county: form.county || undefined,
+        subCounty: form.subCounty || undefined,
+        ward: form.ward || undefined,
+        village: form.village || undefined,
         password: form.password || undefined,
       });
       toast.success("Lecturer created!");
@@ -99,6 +108,9 @@ export function LecturersClient({ lecturers, zones }: { lecturers: Lecturer[], z
         zone: form.zone || undefined,
         zoneId: form.zoneId || undefined,
         county: form.county || undefined,
+        subCounty: form.subCounty || undefined,
+        ward: form.ward || undefined,
+        village: form.village || undefined,
         password: form.password || undefined,
       });
       toast.success("Lecturer updated!");
@@ -113,7 +125,8 @@ export function LecturersClient({ lecturers, zones }: { lecturers: Lecturer[], z
   };
 
   const handleDelete = async (lecturer: Lecturer) => {
-    if (!confirm(`Are you sure you want to delete ${lecturer.name}?`)) return;
+    const ok = await confirm(`Delete ${lecturer.name}?`, `Are you sure you want to delete ${lecturer.name}?`);
+    if (!ok) return;
     try {
       await deleteLecturer(lecturer.id);
       toast.success("Lecturer deleted.");
@@ -123,7 +136,8 @@ export function LecturersClient({ lecturers, zones }: { lecturers: Lecturer[], z
   };
 
   const handleBulkDelete = async (selected: Lecturer[]) => {
-    if (!confirm(`Are you sure you want to delete ${selected.length} lecturers?`)) return;
+    const ok = await confirm("Bulk Delete", `Are you sure you want to delete ${selected.length} lecturers?`);
+    if (!ok) return;
     setLoading(true);
     try {
       await bulkDeleteLecturers(selected.map((s) => s.id));
@@ -145,6 +159,9 @@ export function LecturersClient({ lecturers, zones }: { lecturers: Lecturer[], z
       zone: lecturer.zone || "",
       zoneId: lecturer.zoneId || "",
       county: lecturer.county || "",
+      subCounty: (lecturer as any).subCounty || "",
+      ward: (lecturer as any).ward || "",
+      village: (lecturer as any).village || "",
       password: "", // Don't pre-fill password on edit
     });
     setEditOpen(true);
@@ -320,11 +337,12 @@ export function LecturersClient({ lecturers, zones }: { lecturers: Lecturer[], z
             ))}
           </select>
         </div>
-        <div className="space-y-2">
-          <Label>County</Label>
-          <Input value={form.county} onChange={(e) => setForm({ ...form, county: e.target.value })} placeholder="Nairobi" />
-        </div>
       </div>
+
+      <KenyaLocationPicker
+        value={{ county: form.county, subCounty: form.subCounty, ward: form.ward, village: form.village }}
+        onChange={(data) => setForm({ ...form, ...data })}
+      />
       <div className="grid grid-cols-1 gap-4">
         <div className="space-y-2">
           <Label>Password</Label>
@@ -422,6 +440,7 @@ export function LecturersClient({ lecturers, zones }: { lecturers: Lecturer[], z
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmModal />
     </div>
   );
 }

@@ -22,11 +22,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Plus, Pencil, Trash2, Users, School, Upload, Download, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { createZone, updateZone, deleteZone, bulkDeleteZones, bulkCreateZones } from "../_actions/crud";
+import { KenyaLocationPicker } from "@/components/shared/kenya-location-picker";
+import { useConfirm } from "@/hooks/use-confirm";
 
 type ZoneWithCounts = {
   id: string;
   name: string;
   county: string;
+  subCounty: string | null;
+  ward: string | null;
+  village: string | null;
   description: string | null;
   isActive: boolean;
   _count: {
@@ -36,6 +41,7 @@ type ZoneWithCounts = {
 };
 
 export function ZonesClient({ zones }: { zones: ZoneWithCounts[] }) {
+  const [ConfirmModal, confirm] = useConfirm();
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [csvOpen, setCsvOpen] = useState(false);
@@ -45,11 +51,14 @@ export function ZonesClient({ zones }: { zones: ZoneWithCounts[] }) {
   const [form, setForm] = useState({
     name: "",
     county: "",
+    subCounty: "",
+    ward: "",
+    village: "",
     description: "",
     isActive: true,
   });
 
-  const resetForm = () => setForm({ name: "", county: "", description: "", isActive: true });
+  const resetForm = () => setForm({ name: "", county: "", subCounty: "", ward: "", village: "", description: "", isActive: true });
 
   const handleAdd = async () => {
     if (!form.name || !form.county) {
@@ -61,6 +70,9 @@ export function ZonesClient({ zones }: { zones: ZoneWithCounts[] }) {
       await createZone({
         name: form.name,
         county: form.county,
+        subCounty: form.subCounty || undefined,
+        ward: form.ward || undefined,
+        village: form.village || undefined,
         description: form.description || undefined,
         isActive: form.isActive,
       });
@@ -81,6 +93,9 @@ export function ZonesClient({ zones }: { zones: ZoneWithCounts[] }) {
       await updateZone(editingZone.id, {
         name: form.name,
         county: form.county,
+        subCounty: form.subCounty || undefined,
+        ward: form.ward || undefined,
+        village: form.village || undefined,
         description: form.description || undefined,
         isActive: form.isActive,
       });
@@ -100,7 +115,8 @@ export function ZonesClient({ zones }: { zones: ZoneWithCounts[] }) {
       toast.error("Cannot delete a zone with assigned schools or lecturers.");
       return;
     }
-    if (!confirm(`Are you sure you want to delete ${zone.name}?`)) return;
+    const ok = await confirm(`Delete ${zone.name}?`, `Are you sure you want to delete ${zone.name}?`);
+    if (!ok) return;
     try {
       await deleteZone(zone.id);
       toast.success("Zone deleted.");
@@ -114,7 +130,8 @@ export function ZonesClient({ zones }: { zones: ZoneWithCounts[] }) {
       toast.error("Some selected zones have assigned schools or lecturers. Unassign them first.");
       return;
     }
-    if (!confirm(`Are you sure you want to delete ${selected.length} zones?`)) return;
+    const ok = await confirm("Bulk Delete", `Are you sure you want to delete ${selected.length} zones?`);
+    if (!ok) return;
     setLoading(true);
     try {
       const result = await bulkDeleteZones(selected.map((z) => z.id));
@@ -168,6 +185,9 @@ export function ZonesClient({ zones }: { zones: ZoneWithCounts[] }) {
     setForm({
       name: zone.name,
       county: zone.county,
+      subCounty: zone.subCounty || "",
+      ward: zone.ward || "",
+      village: zone.village || "",
       description: zone.description || "",
       isActive: zone.isActive,
     });
@@ -255,10 +275,13 @@ export function ZonesClient({ zones }: { zones: ZoneWithCounts[] }) {
         <Label>Zone Name *</Label>
         <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="E.g., Nairobi Zone A" />
       </div>
-      <div className="space-y-2">
-        <Label>County *</Label>
-        <Input value={form.county} onChange={(e) => setForm({ ...form, county: e.target.value })} placeholder="E.g., Nairobi" />
-      </div>
+      
+      <KenyaLocationPicker 
+        value={{ county: form.county, subCounty: form.subCounty, ward: form.ward, village: form.village }} 
+        onChange={(data) => setForm({ ...form, ...data })} 
+        required 
+      />
+
       <div className="space-y-2">
         <Label>Description</Label>
         <Textarea 
@@ -364,6 +387,7 @@ export function ZonesClient({ zones }: { zones: ZoneWithCounts[] }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmModal />
     </div>
   );
 }

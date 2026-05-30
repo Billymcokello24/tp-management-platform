@@ -20,6 +20,8 @@ import { Label } from "@/components/ui/label";
 import { Plus, Pencil, Trash2, Users, Upload, Download, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { createSchool, updateSchool, deleteSchool, bulkCreateSchools, bulkDeleteSchools } from "../_actions/crud";
+import { useConfirm } from "@/hooks/use-confirm";
+import { KenyaLocationPicker } from "@/components/shared/kenya-location-picker";
 import dynamic from "next/dynamic";
 
 const LocationPicker = dynamic(() => import("./location-picker"), { ssr: false, loading: () => <div className="h-[250px] bg-muted w-full animate-pulse rounded-md mt-2"></div> });
@@ -48,6 +50,7 @@ interface ZoneOption {
 }
 
 export function SchoolsClient({ schools, zones }: { schools: SchoolRow[], zones: ZoneOption[] }) {
+  const [ConfirmModal, confirm] = useConfirm();
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [csvOpen, setCsvOpen] = useState(false);
@@ -58,6 +61,8 @@ export function SchoolsClient({ schools, zones }: { schools: SchoolRow[], zones:
     name: "",
     county: "",
     subCounty: "",
+    ward: "",
+    village: "",
     principal: "",
     phone: "",
     email: "",
@@ -70,7 +75,7 @@ export function SchoolsClient({ schools, zones }: { schools: SchoolRow[], zones:
   });
 
   const resetForm = () => setForm({ 
-    name: "", county: "", subCounty: "", principal: "", phone: "", email: "", 
+    name: "", county: "", subCounty: "", ward: "", village: "", principal: "", phone: "", email: "", 
     address: "", latitude: "", longitude: "", geofenceRadius: "500", subjects: "", zoneId: "" 
   });
 
@@ -85,6 +90,8 @@ export function SchoolsClient({ schools, zones }: { schools: SchoolRow[], zones:
         name: form.name,
         county: form.county,
         subCounty: form.subCounty,
+        ward: form.ward || undefined,
+        village: form.village || undefined,
         principal: form.principal || undefined,
         phone: form.phone || undefined,
         email: form.email || undefined,
@@ -113,6 +120,8 @@ export function SchoolsClient({ schools, zones }: { schools: SchoolRow[], zones:
         name: form.name,
         county: form.county,
         subCounty: form.subCounty,
+        ward: form.ward || undefined,
+        village: form.village || undefined,
         principal: form.principal || undefined,
         phone: form.phone || undefined,
         email: form.email || undefined,
@@ -139,7 +148,8 @@ export function SchoolsClient({ schools, zones }: { schools: SchoolRow[], zones:
       toast.error("Cannot delete a school with assigned students. Reassign them first.");
       return;
     }
-    if (!confirm(`Are you sure you want to delete ${school.name}?`)) return;
+    const ok = await confirm(`Delete ${school.name}?`, `Are you sure you want to delete ${school.name}?`);
+    if (!ok) return;
     try {
       await deleteSchool(school.id);
       toast.success("School deleted.");
@@ -153,7 +163,8 @@ export function SchoolsClient({ schools, zones }: { schools: SchoolRow[], zones:
       toast.error("Some selected schools have assigned students. Unassign them first.");
       return;
     }
-    if (!confirm(`Are you sure you want to delete ${selected.length} schools?`)) return;
+    const ok = await confirm("Bulk Delete", `Are you sure you want to delete ${selected.length} schools?`);
+    if (!ok) return;
     setLoading(true);
     try {
       await bulkDeleteSchools(selected.map((s) => s.id));
@@ -222,6 +233,8 @@ export function SchoolsClient({ schools, zones }: { schools: SchoolRow[], zones:
       name: school.name,
       county: school.county,
       subCounty: school.subCounty,
+      ward: (school as any).ward || "",
+      village: (school as any).village || "",
       principal: school.principal || "",
       phone: school.phone || "",
       email: school.email || "",
@@ -325,16 +338,11 @@ export function SchoolsClient({ schools, zones }: { schools: SchoolRow[], zones:
         </select>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>County *</Label>
-          <Input value={form.county} onChange={(e) => setForm({ ...form, county: e.target.value })} placeholder="Nairobi" />
-        </div>
-        <div className="space-y-2">
-          <Label>Sub-County *</Label>
-          <Input value={form.subCounty} onChange={(e) => setForm({ ...form, subCounty: e.target.value })} placeholder="Westlands" />
-        </div>
-      </div>
+      <KenyaLocationPicker
+        value={{ county: form.county, subCounty: form.subCounty, ward: form.ward, village: form.village }}
+        onChange={(data) => setForm({ ...form, ...data })}
+        required
+      />
 
       <div className="space-y-2">
         <Label>Teaching Subjects Offered (comma separated)</Label>
@@ -475,6 +483,7 @@ export function SchoolsClient({ schools, zones }: { schools: SchoolRow[], zones:
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmModal />
     </div>
   );
 }

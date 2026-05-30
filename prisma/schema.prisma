@@ -139,6 +139,9 @@ model Lecturer {
   department String
   zone       String?
   county     String?
+  subCounty  String?
+  ward       String?
+  village    String?
   zoneId     String?
 
   user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -159,6 +162,9 @@ model Zone {
   id          String   @id @default(cuid())
   name        String   @unique
   county      String
+  subCounty   String?
+  ward        String?
+  village     String?
   description String?
   isActive    Boolean  @default(true)
 
@@ -176,6 +182,8 @@ model School {
   name           String
   county         String
   subCounty      String
+  ward           String?
+  village        String?
   principal      String?
   phone          String?
   email          String?

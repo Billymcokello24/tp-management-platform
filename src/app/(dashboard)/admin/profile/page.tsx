@@ -6,15 +6,35 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Save, User } from "lucide-react";
+import { Save, User, Loader2 } from "lucide-react";
+import { updateProfile } from "@/app/(dashboard)/_actions/profile";
+import { useState } from "react";
 
 export default function ProfilePage() {
-  const { data: session } = useSession();
+  const { data: session, update } = useSession();
   const user = session?.user;
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = () => {
-    toast.success("Profile updated successfully.");
-  };
+  async function handleSave(formData: FormData) {
+    setIsSaving(true);
+    try {
+      const res = await updateProfile(formData);
+      if (res.success) {
+        toast.success(res.message);
+        if (formData.get("name")) {
+          await update({ name: formData.get("name") });
+        }
+        (document.getElementById("currentPassword") as HTMLInputElement).value = "";
+        (document.getElementById("newPassword") as HTMLInputElement).value = "";
+      } else {
+        toast.error(res.error || "Failed to update profile.");
+      }
+    } catch (e) {
+      toast.error("Something went wrong.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -33,56 +53,59 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Personal Information</CardTitle>
-          <CardDescription>Update your contact details and display name.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center gap-4">
-            <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-              <User className="h-10 w-10" />
+      <form action={handleSave}>
+        <Card>
+          <CardHeader>
+            <CardTitle>Personal Information</CardTitle>
+            <CardDescription>Update your contact details and display name.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex items-center gap-4">
+              <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                <User className="h-10 w-10" />
+              </div>
+              <Button variant="outline" size="sm" type="button" className="rounded-xl">Change Avatar</Button>
             </div>
-            <Button variant="outline" size="sm" className="rounded-xl">Change Avatar</Button>
-          </div>
 
-          <div className="grid gap-4">
-            <div className="space-y-2">
-              <Label>Full Name</Label>
-              <Input defaultValue={user?.name || "System Administrator"} />
-            </div>
-            <div className="space-y-2">
-              <Label>Email Address</Label>
-              <Input type="email" defaultValue={user?.email || "admin@tmu.ac.ke"} disabled />
-              <p className="text-xs text-muted-foreground">Email addresses cannot be changed directly. Contact IT support.</p>
-            </div>
-            <div className="space-y-2">
-              <Label>Phone Number</Label>
-              <Input defaultValue="+254 700 000000" />
-            </div>
-          </div>
-
-          <div className="pt-4 border-t border-border/50">
-            <h3 className="font-medium mb-4">Change Password</h3>
             <div className="grid gap-4">
               <div className="space-y-2">
-                <Label>Current Password</Label>
-                <Input type="password" />
+                <Label htmlFor="name">Full Name</Label>
+                <Input id="name" name="name" defaultValue={user?.name || ""} required />
               </div>
               <div className="space-y-2">
-                <Label>New Password</Label>
-                <Input type="password" />
+                <Label htmlFor="email">Email Address</Label>
+                <Input id="email" type="email" defaultValue={user?.email || ""} disabled />
+                <p className="text-xs text-muted-foreground">Email addresses cannot be changed directly. Contact IT support.</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input id="phone" name="phone" defaultValue={(user as any)?.phone || ""} />
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      <div className="flex justify-end">
-        <Button onClick={handleSave} className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-sm">
-          <Save className="mr-2 h-4 w-4" /> Save Profile
-        </Button>
-      </div>
+            <div className="pt-4 border-t border-border/50">
+              <h3 className="font-medium mb-4">Change Password</h3>
+              <div className="grid gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="currentPassword">Current Password</Label>
+                  <Input id="currentPassword" name="currentPassword" type="password" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword">New Password</Label>
+                  <Input id="newPassword" name="newPassword" type="password" />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="flex justify-end mt-6">
+          <Button type="submit" disabled={isSaving} className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-sm">
+            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            Save Profile
+          </Button>
+        </div>
+      </form>
     </div>
   );
 }
