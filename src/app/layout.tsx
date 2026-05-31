@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/shared/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { ServiceWorkerRegister } from "@/components/shared/service-worker-register";
 import { PWAInstallPrompt } from "@/components/shared/pwa-install-prompt";
+import { NetworkStatus } from "@/components/shared/network-status";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,6 +20,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Tom Mboya University | Teaching Practice Platform",
   description: "Next Generation Teaching Practice Management Platform",
+  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     title: "TMU TP",
@@ -55,6 +57,7 @@ export default function RootLayout({
           <Toaster />
           <ServiceWorkerRegister />
           <PWAInstallPrompt />
+          <NetworkStatus />
         </ThemeProvider>
       </body>
     </html>

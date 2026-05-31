@@ -25,6 +25,7 @@ import { KenyaLocationPicker } from "@/components/shared/kenya-location-picker";
 import dynamic from "next/dynamic";
 
 const LocationPicker = dynamic(() => import("./location-picker"), { ssr: false, loading: () => <div className="h-[250px] bg-muted w-full animate-pulse rounded-md mt-2"></div> });
+const SchoolMap = dynamic(() => import("@/components/shared/school-map"), { ssr: false, loading: () => <div className="h-[400px] w-full bg-muted animate-pulse rounded-xl mt-2 border border-border"></div> });
 
 interface SchoolRow {
   id: string;
@@ -412,6 +413,10 @@ export function SchoolsClient({ schools, zones }: { schools: SchoolRow[], zones:
             Manage all TP placement schools, zones, and GPS coordinates.
           </p>
         </div>
+      </div>
+
+      <div className="mb-6">
+        <SchoolMap schools={schools} />
       </div>
 
       <DataTable

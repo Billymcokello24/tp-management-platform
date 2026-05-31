@@ -17,6 +17,8 @@ export function AssessmentFormClient({ student, lecturerId }: { student: any; le
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const geo = useGeolocation();
+  const [isCheckedIn, setIsCheckedIn] = useState(false);
+  const [checkInTime, setCheckInTime] = useState<Date | null>(null);
 
   // Determine geofence status
   const schoolHasGPS = student.schoolLatitude !== null && student.schoolLongitude !== null;
@@ -110,9 +112,15 @@ export function AssessmentFormClient({ student, lecturerId }: { student: any; le
       gpsData.geoVerificationNote = `GPS error: ${geo.error}`;
     }
 
-    // POLICY: NO STRICT LOCK - Lecturer can assess anywhere, but GPS is still recorded.
+    // STRICT GEOFENCE LOCK
     if (schoolHasGPS && geofenceResult && !geofenceResult.isInside) {
-      toast.warning(`Note: You appear to be outside the ${student.schoolGeofenceRadius}m geofence. Your location will be recorded as outside.`);
+      toast.error(`You must be physically present at the assigned school before submitting this assessment. (${student.schoolGeofenceRadius}m radius)`);
+      return;
+    }
+    
+    if (schoolHasGPS && !isCheckedIn) {
+      toast.error("Please click 'Check In' to verify your location before assessing.");
+      return;
     }
 
     setLoading(true);
@@ -120,6 +128,7 @@ export function AssessmentFormClient({ student, lecturerId }: { student: any; le
       const payload = {
         studentId: student.id,
         lecturerId,
+        checkInTime: checkInTime ? checkInTime.toISOString() : new Date().toISOString(),
         ...marks,
         ...comments,
         ...gpsData,
@@ -217,24 +226,43 @@ export function AssessmentFormClient({ student, lecturerId }: { student: any; le
                 </Button>
               </div>
 
-              {schoolHasGPS && geofenceResult ? (
-                geofenceResult.isInside ? (
-                  <div className="flex items-center gap-3 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 px-4 py-3 rounded-xl border border-emerald-200 dark:border-emerald-800">
-                    <ShieldCheck className="h-5 w-5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm font-semibold">Location Verified</p>
-                      <p className="text-xs opacity-80 mt-0.5">You are {geofenceResult.distanceFormatted} from {student.schoolName} (within {student.schoolGeofenceRadius}m radius).</p>
+                {schoolHasGPS && geofenceResult ? (
+                  geofenceResult.isInside ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 px-4 py-3 rounded-xl border border-emerald-200 dark:border-emerald-800">
+                        <ShieldCheck className="h-5 w-5 flex-shrink-0" />
+                        <div>
+                          <p className="text-sm font-semibold">Location Verified</p>
+                          <p className="text-xs opacity-80 mt-0.5">You are {geofenceResult.distanceFormatted} from {student.schoolName} (within {student.schoolGeofenceRadius}m radius).</p>
+                        </div>
+                      </div>
+                      
+                      {!isCheckedIn ? (
+                        <Button 
+                          onClick={() => {
+                            setIsCheckedIn(true);
+                            setCheckInTime(new Date());
+                            toast.success("Successfully checked in at the school.");
+                          }}
+                          className="w-full sm:w-auto"
+                        >
+                          <MapPin className="h-4 w-4 mr-2" /> Check In
+                        </Button>
+                      ) : (
+                        <div className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                          Checked in at: {checkInTime?.toLocaleTimeString()}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-3 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 px-4 py-3 rounded-xl border border-amber-200 dark:border-amber-800">
-                    <ShieldAlert className="h-5 w-5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm font-semibold">Outside School Geofence</p>
-                      <p className="text-xs opacity-80 mt-0.5">You are {geofenceResult.distanceFormatted} away from {student.schoolName}. Submission will be flagged for review.</p>
+                  ) : (
+                    <div className="flex items-center gap-3 bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 px-4 py-3 rounded-xl border border-red-200 dark:border-red-800">
+                      <ShieldAlert className="h-5 w-5 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-semibold">Outside School Geofence</p>
+                        <p className="text-xs opacity-80 mt-0.5">You are {geofenceResult.distanceFormatted} away from {student.schoolName}. You must be physically present at the assigned school before submitting this assessment.</p>
+                      </div>
                     </div>
-                  </div>
-                )
+                  )
               ) : !schoolHasGPS ? (
                 <div className="flex items-center gap-3 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 px-4 py-3 rounded-xl border border-blue-200 dark:border-blue-800">
                   <MapPin className="h-5 w-5 flex-shrink-0" />
