@@ -183,26 +183,30 @@ export function LessonPlanDetailClient({ plan }: { plan: any }) {
               <tr>
                 <td style={{ border: "1px solid #cbd5e1", padding: isPdf ? "4px 6px" : "8px", fontWeight: "bold", background: "#f8fafc" }}>Subject</td>
                 <td style={{ border: "1px solid #cbd5e1", padding: isPdf ? "4px 6px" : "8px" }}>{plan.subject}</td>
-                <td style={{ border: "1px solid #cbd5e1", padding: isPdf ? "4px 6px" : "8px", fontWeight: "bold", background: "#f8fafc" }}>Class / Form</td>
-                <td style={{ border: "1px solid #cbd5e1", padding: isPdf ? "4px 6px" : "8px" }}>{plan.classForm} {plan.stream ? `(${plan.stream})` : ""}</td>
+                <td style={{ border: "1px solid #cbd5e1", padding: isPdf ? "4px 6px" : "8px", fontWeight: "bold", background: "#f8fafc" }}>Class / Grade</td>
+                <td style={{ border: "1px solid #cbd5e1", padding: isPdf ? "4px 6px" : "8px" }}>{plan.classForm}</td>
               </tr>
               <tr>
-                <td style={{ border: "1px solid #cbd5e1", padding: isPdf ? "4px 6px" : "8px", fontWeight: "bold", background: "#f8fafc" }}>Topic</td>
+                <td style={{ border: "1px solid #cbd5e1", padding: isPdf ? "4px 6px" : "8px", fontWeight: "bold", background: "#f8fafc" }}>Strand / Topics</td>
                 <td style={{ border: "1px solid #cbd5e1", padding: isPdf ? "4px 6px" : "8px" }}>{plan.topic}</td>
-                <td style={{ border: "1px solid #cbd5e1", padding: isPdf ? "4px 6px" : "8px", fontWeight: "bold", background: "#f8fafc" }}>Sub-topic</td>
+                <td style={{ border: "1px solid #cbd5e1", padding: isPdf ? "4px 6px" : "8px", fontWeight: "bold", background: "#f8fafc" }}>Sub Strand</td>
                 <td style={{ border: "1px solid #cbd5e1", padding: isPdf ? "4px 6px" : "8px" }}>{plan.subTopic || "N/A"}</td>
               </tr>
               <tr>
+                <td style={{ border: "1px solid #cbd5e1", padding: isPdf ? "4px 6px" : "8px", fontWeight: "bold", background: "#f8fafc" }}>Stream</td>
+                <td style={{ border: "1px solid #cbd5e1", padding: isPdf ? "4px 6px" : "8px" }}>{plan.stream || "N/A"}</td>
                 <td style={{ border: "1px solid #cbd5e1", padding: isPdf ? "4px 6px" : "8px", fontWeight: "bold", background: "#f8fafc" }}>Date</td>
                 <td style={{ border: "1px solid #cbd5e1", padding: isPdf ? "4px 6px" : "8px" }}>{dateFormatted}</td>
+              </tr>
+              <tr>
                 <td style={{ border: "1px solid #cbd5e1", padding: isPdf ? "4px 6px" : "8px", fontWeight: "bold", background: "#f8fafc" }}>Time & Duration</td>
-                <td style={{ border: "1px solid #cbd5e1", padding: isPdf ? "4px 6px" : "8px" }}>{plan.startTime || "-"} to {plan.endTime || "-"} ({plan.duration || "-"})</td>
+                <td colSpan={3} style={{ border: "1px solid #cbd5e1", padding: isPdf ? "4px 6px" : "8px" }}>{plan.startTime || "-"} to {plan.endTime || "-"} ({plan.duration || "-"})</td>
               </tr>
             </tbody>
           </table>
 
           {/* Helper Component for Section Headers */}
-          <SectionTitle title="1. Lesson Objectives" isPdf={isPdf} />
+          <SectionTitle title="1. Expected learning outcomes" isPdf={isPdf} />
           <div style={{ whiteSpace: "pre-wrap", fontSize: isPdf ? "9px" : "12px", color: "#1f2937", marginBottom: isPdf ? "15px" : "24px" }}>{plan.objectives}</div>
 
           <SectionTitle title="2. Introduction / Set Induction" isPdf={isPdf} />

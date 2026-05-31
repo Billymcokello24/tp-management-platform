@@ -27,7 +27,7 @@ export function LessonPlansClient({ plans }: { plans: LessonPlanRow[] }) {
   const columns: ColumnDef<LessonPlanRow>[] = [
     {
       accessorKey: "topic",
-      header: "Topic / Subject",
+      header: "Strand / Topics",
       cell: ({ row }) => (
         <div>
           <p className="font-medium">{row.original.topic}</p>
@@ -37,7 +37,7 @@ export function LessonPlansClient({ plans }: { plans: LessonPlanRow[] }) {
     },
     {
       accessorKey: "classForm",
-      header: "Class",
+      header: "Class / Grade",
     },
     {
       accessorKey: "date",
@@ -83,8 +83,8 @@ export function LessonPlansClient({ plans }: { plans: LessonPlanRow[] }) {
   ];
 
   const downloadTemplate = () => {
-    const header = "Subject,Class/Form,Stream,Topic,SubTopic,Date,StartTime,EndTime,Duration,Objectives\n";
-    const example = '"Mathematics","Form 2","East","Algebra","Linear Equations","2026-06-01","08:00","08:40","40 mins","By the end of the lesson..."\n';
+    const header = "Subject,Class/Grade,Stream,Strand/Topics,SubStrand,Date,StartTime,EndTime,Duration,Expected Learning Outcomes\n";
+    const example = '"Mathematics","Grade 8","East","Algebra","Linear Equations","2026-06-01","08:00","08:40","40 mins","By the end of the lesson..."\n';
     const blob = new Blob([header + example], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -186,7 +186,7 @@ export function LessonPlansClient({ plans }: { plans: LessonPlanRow[] }) {
         columns={columns}
         data={plans}
         searchKey="topic"
-        searchPlaceholder="Search by topic..."
+        searchPlaceholder="Search by strand / topic..."
       />
     </div>
   );

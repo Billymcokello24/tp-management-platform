@@ -88,7 +88,7 @@ export function SchemesClient({ initialSchemes }: { initialSchemes: any[] }) {
   };
 
   const downloadTemplate = () => {
-    const header = "Week,Lesson,Topic,SubTopic,Objectives,LearningActivities,Resources,Remarks\n";
+    const header = "Week,Lesson,Strand/Topics,SubStrand,Expected Learning Outcomes,LearningActivities,Resources,Remarks\n";
     const example = '1,1,Algebra,Linear Equations,"By the end of the lesson the learner should be able to solve linear equations","Group discussions and individual practice","Mathematics Textbook pg 45, Chalkboard","Completed successfully"\n';
     const blob = new Blob([header + example], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -238,7 +238,7 @@ export function SchemesClient({ initialSchemes }: { initialSchemes: any[] }) {
                           <span className="text-sm font-bold text-primary">W{row.week || (i + 1)}</span>
                         </div>
                         <div className="min-w-0">
-                          <p className="font-semibold text-sm truncate">{row.topic || "Untitled Topic"}</p>
+                          <p className="font-semibold text-sm truncate">{row.topic || "Untitled Strand"}</p>
                           <p className="text-xs text-muted-foreground truncate">
                             {row.subTopic ? `${row.subTopic} · ` : ""}Lesson {row.lesson || "-"}
                           </p>
@@ -269,17 +269,17 @@ export function SchemesClient({ initialSchemes }: { initialSchemes: any[] }) {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Topic</Label>
+                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Strand / Topics</Label>
                             <Input value={row.topic} onChange={(e) => updateRow(i, "topic", e.target.value)} placeholder="e.g. Algebra" className="h-11 rounded-xl" />
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Sub-Topic</Label>
+                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Sub Strand</Label>
                             <Input value={row.subTopic} onChange={(e) => updateRow(i, "subTopic", e.target.value)} placeholder="e.g. Linear Equations" className="h-11 rounded-xl" />
                           </div>
                         </div>
 
                         <div className="space-y-2">
-                          <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Objectives</Label>
+                          <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Expected Learning Outcomes</Label>
                           <Textarea
                             value={row.objectives}
                             onChange={(e) => updateRow(i, "objectives", e.target.value)}

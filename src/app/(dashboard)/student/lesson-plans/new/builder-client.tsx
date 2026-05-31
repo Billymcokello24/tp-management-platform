@@ -114,8 +114,8 @@ export function BuilderClient() {
             <Input placeholder="e.g. Mathematics" value={basicInfo.subject} onChange={e => setBasicInfo({...basicInfo, subject: e.target.value})} />
           </div>
           <div className="space-y-2">
-            <Label>Class / Form</Label>
-            <Input placeholder="e.g. Form 2" value={basicInfo.classForm} onChange={e => setBasicInfo({...basicInfo, classForm: e.target.value})} />
+            <Label>Class / Grade</Label>
+            <Input placeholder="e.g. Form 3" value={basicInfo.classForm} onChange={e => setBasicInfo({...basicInfo, classForm: e.target.value})} />
           </div>
           <div className="space-y-2">
             <Label>Stream</Label>
@@ -123,11 +123,11 @@ export function BuilderClient() {
           </div>
           
           <div className="space-y-2 md:col-span-2">
-            <Label>Topic</Label>
+            <Label>Strand / Topics</Label>
             <Input placeholder="e.g. Algebra" value={basicInfo.topic} onChange={e => setBasicInfo({...basicInfo, topic: e.target.value})} />
           </div>
           <div className="space-y-2">
-            <Label>Sub-topic</Label>
+            <Label>Sub Strand</Label>
             <Input placeholder="e.g. Linear Equations" value={basicInfo.subTopic} onChange={e => setBasicInfo({...basicInfo, subTopic: e.target.value})} />
           </div>
 
@@ -152,8 +152,8 @@ export function BuilderClient() {
       {/* Objectives */}
       <Card>
         <CardHeader className="bg-muted/30 border-b border-border/50">
-          <CardTitle>Lesson Objectives</CardTitle>
-          <CardDescription>By the end of the lesson, the learner should be able to...</CardDescription>
+          <CardTitle>Expected learning outcomes</CardTitle>
+          <CardDescription>What should the learners be able to do by the end of the lesson?</CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
           <Textarea 

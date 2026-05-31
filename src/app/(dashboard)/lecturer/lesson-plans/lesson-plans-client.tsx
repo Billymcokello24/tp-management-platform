@@ -177,10 +177,10 @@ export function LecturerLessonPlansClient({
                                 Subject
                               </th>
                               <th className="text-left py-2 px-3 font-semibold text-muted-foreground text-xs uppercase tracking-wider">
-                                Topic
+                                Strand / Topics
                               </th>
                               <th className="text-left py-2 px-3 font-semibold text-muted-foreground text-xs uppercase tracking-wider">
-                                Class
+                                Class / Grade
                               </th>
                               <th className="text-left py-2 px-3 font-semibold text-muted-foreground text-xs uppercase tracking-wider">
                                 Date
