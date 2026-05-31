@@ -5,84 +5,69 @@ import { DataTable } from "@/components/admin/data-table";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Download, ClipboardCheck, Clock, FileText, CheckCircle2 } from "lucide-react";
+import { Download, ClipboardCheck, Clock, FileText, CheckCircle2, Eye } from "lucide-react";
+import Link from "next/link";
 
-interface AssessmentRow {
+interface AssessmentSlot {
   id: string;
-  studentName: string;
-  admissionNumber: string;
-  lecturerName: string;
-  status: string;
   totalMarks: number;
   grade: string;
-  performanceBand: string;
-  generalComments: string;
+  status: string;
+  lecturerName: string;
   createdAt: string;
-  // Included fields for export
-  [key: string]: any;
 }
 
-const statusColors: Record<string, string> = {
-  DRAFT: "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300",
-  SUBMITTED: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
-  REVIEWED: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+interface StudentRow {
+  studentId: string;
+  studentName: string;
+  admissionNumber: string;
+  course: string;
+  schoolName: string;
+  a1: AssessmentSlot | null;
+  a2: AssessmentSlot | null;
+  a3: AssessmentSlot | null;
+}
+
+const scoreColor = (score: number | undefined) => {
+  if (!score) return "text-muted-foreground";
+  if (score >= 70) return "text-emerald-600 font-bold";
+  if (score < 40) return "text-red-600 font-bold";
+  return "text-foreground font-semibold";
 };
 
 export function AssessmentsClient({
-  assessments,
+  students,
   stats,
 }: {
-  assessments: AssessmentRow[];
+  students: StudentRow[];
   stats: { total: number; draft: number; submitted: number; reviewed: number; avgScore: number };
 }) {
 
-  // Function to trigger a CSV download
+  // CSV Export — one row per student with A1/A2/A3 columns
   const exportToCSV = () => {
-    if (assessments.length === 0) return;
+    if (students.length === 0) return;
 
-    // Define CSV Headers mapping exactly to what the university might want
     const headers = [
-      "Assessment ID", "Date", "Status", "Student Name", "Admission No", "Lecturer Name", 
-      "Total Marks (100)", "Grade", "Performance Band", "Scheme of Work (2)", "Objectives (4)", 
-      "Activities (2)", "Sequence (4)", "Introduction (5)", "Logical Presentation (5)", 
-      "Content Relevance (5)", "Content Adequacy (5)", "Teaching Strategies (5)", 
-      "Teaching Skills (5)", "Content Mastery (5)", "Communication (5)", "Chalkboard Use (3)", 
-      "Resource Timing (3)", "Resource Appropriateness (4)", "Innovativeness (5)", 
-      "Learner Control (5)", "Learner Participation (5)", "Group Work (4)", "Rapport (5)", 
-      "Closure (2)", "Concluding Activities (2)", "Assignment (1)", "Personality (5)", 
-      "Self Appraisal (3)", "General Comments", "Areas of Strength", "Areas of Improvement"
+      "Student Name", "Admission No", "Course", "School",
+      "A1 Score", "A1 Grade", "A1 Lecturer", "A1 Date",
+      "A2 Score", "A2 Grade", "A2 Lecturer", "A2 Date",
+      "A3 Score", "A3 Grade", "A3 Lecturer", "A3 Date",
+      "Average Score"
     ];
 
-    // Map each assessment to a row matching the headers
-    const rows = assessments.map(a => [
-      a.id,
-      new Date(a.createdAt).toLocaleDateString(),
-      a.status,
-      `"${a.studentName}"`,
-      a.admissionNumber,
-      `"${a.lecturerName}"`,
-      a.totalMarks,
-      a.grade,
-      a.performanceBand,
-      a.schemeOfWorkMark, a.lessonPlanObjectives, a.lessonPlanActivities, a.lessonPlanSequence,
-      a.introductionMark, a.logicalPresentation, a.contentRelevance, a.contentAdequacy,
-      a.teachingStrategies, a.teachingSkills, a.contentMastery, a.communicationMark,
-      a.chalkboardUse, a.resourceTiming, a.resourceAppropriateness, a.resourceInnovativeness,
-      a.learnerControl, a.learnerParticipation, a.groupWork, a.teacherLearnerRapport,
-      a.closureSkills, a.concludingActivities, a.assignmentMark, a.personalityMark,
-      a.selfAppraisalMark,
-      `"${(a.generalComments || "").replace(/"/g, '""')}"`,
-      `"${(a.areasOfStrength || "").replace(/"/g, '""')}"`,
-      `"${(a.areasOfImprovement || "").replace(/"/g, '""')}"`
-    ]);
+    const rows = students.map(s => {
+      const scores = [s.a1?.totalMarks, s.a2?.totalMarks, s.a3?.totalMarks].filter((v): v is number => v != null);
+      const avg = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : "";
+      return [
+        `"${s.studentName}"`, s.admissionNumber, `"${s.course}"`, `"${s.schoolName}"`,
+        s.a1?.totalMarks ?? "", s.a1?.grade ?? "", `"${s.a1?.lecturerName ?? ""}"`, s.a1 ? new Date(s.a1.createdAt).toLocaleDateString() : "",
+        s.a2?.totalMarks ?? "", s.a2?.grade ?? "", `"${s.a2?.lecturerName ?? ""}"`, s.a2 ? new Date(s.a2.createdAt).toLocaleDateString() : "",
+        s.a3?.totalMarks ?? "", s.a3?.grade ?? "", `"${s.a3?.lecturerName ?? ""}"`, s.a3 ? new Date(s.a3.createdAt).toLocaleDateString() : "",
+        avg,
+      ];
+    });
 
-    // Combine headers and rows
-    const csvContent = [
-      headers.join(","),
-      ...rows.map(row => row.join(","))
-    ].join("\n");
-
-    // Create a Blob and trigger download
+    const csvContent = [headers.join(","), ...rows.map(row => row.join(","))].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -93,64 +78,87 @@ export function AssessmentsClient({
     document.body.removeChild(link);
   };
 
-  const columns: ColumnDef<AssessmentRow>[] = [
+  const ScoreCell = ({ slot }: { slot: AssessmentSlot | null }) => {
+    if (!slot) return <span className="text-muted-foreground text-xs">—</span>;
+    return (
+      <div className="text-center">
+        <span className={scoreColor(slot.totalMarks)}>{slot.totalMarks}</span>
+        <span className="text-muted-foreground text-xs">/100</span>
+      </div>
+    );
+  };
+
+  const columns: ColumnDef<StudentRow>[] = [
     {
       accessorKey: "studentName",
       header: "Student",
       cell: ({ row }) => (
         <div>
-          <p className="font-medium">{row.original.studentName}</p>
+          <p className="font-semibold">{row.original.studentName}</p>
           <p className="text-xs text-muted-foreground">{row.original.admissionNumber}</p>
         </div>
       ),
     },
     {
-      accessorKey: "lecturerName",
-      header: "Lecturer",
+      id: "a1",
+      header: () => <div className="text-center">A1</div>,
+      cell: ({ row }) => <ScoreCell slot={row.original.a1} />,
     },
     {
-      accessorKey: "totalMarks",
-      header: "Score",
-      cell: ({ row }) => (
-        <div className="font-medium">
-          {row.original.totalMarks > 0 ? (
-            <span className={row.original.totalMarks >= 70 ? "text-green-600" : row.original.totalMarks < 40 ? "text-red-600" : ""}>
-              {row.original.totalMarks}%
-            </span>
-          ) : (
-            <span className="text-muted-foreground">-</span>
-          )}
-        </div>
-      ),
+      id: "a2",
+      header: () => <div className="text-center">A2</div>,
+      cell: ({ row }) => <ScoreCell slot={row.original.a2} />,
     },
     {
-      accessorKey: "grade",
-      header: "Grade",
-      cell: ({ row }) => row.original.grade !== "N/A" ? <Badge variant="outline">{row.original.grade}</Badge> : "-",
+      id: "a3",
+      header: () => <div className="text-center">A3</div>,
+      cell: ({ row }) => <ScoreCell slot={row.original.a3} />,
     },
     {
-      accessorKey: "status",
-      header: "Status",
-      cell: ({ row }) => (
-        <Badge className={statusColors[row.original.status] || ""}>
-          {row.original.status}
-        </Badge>
-      ),
+      id: "average",
+      header: () => <div className="text-center">Avg</div>,
+      cell: ({ row }) => {
+        const scores = [row.original.a1?.totalMarks, row.original.a2?.totalMarks, row.original.a3?.totalMarks].filter((v): v is number => v != null);
+        if (scores.length === 0) return <span className="text-muted-foreground text-xs">—</span>;
+        const avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+        return (
+          <div className="text-center">
+            <span className={scoreColor(avg)}>{avg}</span>
+            <span className="text-muted-foreground text-xs">%</span>
+          </div>
+        );
+      },
     },
     {
-      accessorKey: "createdAt",
-      header: "Date",
-      cell: ({ row }) => new Date(row.original.createdAt).toLocaleDateString(),
+      id: "progress",
+      header: "Progress",
+      cell: ({ row }) => {
+        const completed = [row.original.a1, row.original.a2, row.original.a3].filter(Boolean).length;
+        return (
+          <div className="flex items-center gap-1.5">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className={`h-2.5 w-2.5 rounded-full ${
+                  i <= completed ? "bg-emerald-500" : "bg-muted-foreground/20"
+                }`}
+              />
+            ))}
+            <span className="text-xs text-muted-foreground ml-1">{completed}/3</span>
+          </div>
+        );
+      },
     },
     {
       id: "actions",
       header: "Actions",
       cell: ({ row }) => (
-        <a href={`/admin/assessments/${row.original.id}`} target="_blank" rel="noreferrer">
+        <Link href={`/admin/assessments/${row.original.studentId}`}>
           <Button variant="ghost" size="sm">
-            View PDF
+            <Eye className="h-4 w-4 mr-2 text-primary" />
+            View
           </Button>
-        </a>
+        </Link>
       ),
     },
   ];
@@ -167,7 +175,7 @@ export function AssessmentsClient({
             Assessment Monitoring
           </h1>
           <p className="text-sm text-muted-foreground mt-2 font-medium">
-            Track and export all lecturer assessments and rubrics.
+            Track and export all lecturer assessments and rubrics — grouped by student.
           </p>
         </div>
         <Button onClick={exportToCSV} className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm shrink-0">
@@ -223,10 +231,10 @@ export function AssessmentsClient({
       </div>
 
       <div className="pt-4">
-        <h2 className="text-xl font-semibold mb-4">Assessment Database</h2>
+        <h2 className="text-xl font-semibold mb-4">Student Assessment Database</h2>
         <DataTable
           columns={columns}
-          data={assessments}
+          data={students}
           searchKey="studentName"
           searchPlaceholder="Search by student name..."
         />

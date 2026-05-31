@@ -17,7 +17,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Pencil, Trash2, Users, Upload, Download, MapPin } from "lucide-react";
+import { Plus, Pencil, Trash2, Users, Upload, Download, MapPin, Eye } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { createSchool, updateSchool, deleteSchool, bulkCreateSchools, bulkDeleteSchools } from "../_actions/crud";
 import { useConfirm } from "@/hooks/use-confirm";
@@ -317,6 +318,11 @@ export function SchoolsClient({ schools, zones, globalMetrics }: { schools: Scho
       header: "Actions",
       cell: ({ row }) => (
         <div className="flex items-center gap-1">
+          <Link href={`/admin/schools/${row.original.id}`}>
+            <Button variant="ghost" size="sm" className="text-primary hover:text-primary/90">
+              <Eye className="h-4 w-4" />
+            </Button>
+          </Link>
           <Button variant="ghost" size="sm" onClick={() => openEdit(row.original)}>
             <Pencil className="h-4 w-4" />
           </Button>

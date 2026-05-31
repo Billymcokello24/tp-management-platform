@@ -10,7 +10,8 @@ export default async function StudentAssessmentsPage() {
   }
 
   const student = await prisma.student.findUnique({
-    where: { userId: session.user.id }
+    where: { userId: session.user.id },
+    include: { user: { select: { name: true } } }
   });
 
   if (!student) notFound();
@@ -22,17 +23,47 @@ export default async function StudentAssessmentsPage() {
         include: { user: { select: { name: true } } }
       }
     },
-    orderBy: { createdAt: "desc" }
+    orderBy: { createdAt: "asc" }
   });
 
-  const serialized = assessments.map(a => ({
-    id: a.id,
-    lecturerName: a.lecturer.user.name,
-    status: a.status,
-    totalMarks: a.totalMarks,
-    grade: a.grade || "N/A",
-    createdAt: a.createdAt.toISOString()
-  }));
+  // Group assessments for this student
+  const studentMap = new Map<string, {
+    studentId: string;
+    studentName: string;
+    admissionNumber: string;
+    a1: { id: string; totalMarks: number; grade: string; status: string; lecturerName: string; createdAt: string } | null;
+    a2: { id: string; totalMarks: number; grade: string; status: string; lecturerName: string; createdAt: string } | null;
+    a3: { id: string; totalMarks: number; grade: string; status: string; lecturerName: string; createdAt: string } | null;
+  }>();
 
-  return <StudentAssessmentsClient assessments={serialized} />;
+  // Initialize the single student entry
+  studentMap.set(student.id, {
+    studentId: student.id,
+    studentName: student.user.name || "Unknown",
+    admissionNumber: student.admissionNumber,
+    a1: null,
+    a2: null,
+    a3: null,
+  });
+
+  const entry = studentMap.get(student.id)!;
+
+  for (const a of assessments) {
+    const aData = {
+      id: a.id,
+      totalMarks: a.totalMarks,
+      grade: a.grade || "N/A",
+      status: a.status,
+      lecturerName: a.lecturer.user.name || "Unknown",
+      createdAt: a.createdAt.toISOString(),
+    };
+
+    if (!entry.a1) entry.a1 = aData;
+    else if (!entry.a2) entry.a2 = aData;
+    else if (!entry.a3) entry.a3 = aData;
+  }
+
+  const grouped = Array.from(studentMap.values());
+
+  return <StudentAssessmentsClient students={grouped} />;
 }

@@ -388,6 +388,31 @@ export async function getSchools() {
   });
 }
 
+export async function getSchoolProfile(id: string) {
+  return prisma.school.findUnique({
+    where: { id },
+    include: {
+      zone: true,
+      students: {
+        include: {
+          user: { select: { name: true, email: true } },
+          assignment: {
+            include: {
+              lecturer: {
+                include: { user: { select: { name: true, email: true } } }
+              }
+            }
+          },
+          assessments: {
+            where: { status: "REVIEWED" },
+            select: { id: true, totalMarks: true }
+          }
+        }
+      }
+    }
+  });
+}
+
 export async function createSchool(data: {
   name: string;
   county: string;

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
-import { getAssessmentById } from "../../_actions/assessments";
+import { getAssessmentsByStudentId } from "../../_actions/assessments";
 import { AssessmentDetailClient } from "./assessment-detail-client";
+import { prisma } from "@/lib/prisma";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -8,11 +9,24 @@ interface PageProps {
 
 export default async function AssessmentDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const assessment = await getAssessmentById(id);
+  
+  // First, check if the ID passed is actually an Assessment ID (for backward compatibility with old links)
+  let targetStudentId = id;
+  const possibleAssessment = await prisma.assessment.findUnique({
+    where: { id },
+    select: { studentId: true }
+  });
+  
+  if (possibleAssessment) {
+    targetStudentId = possibleAssessment.studentId;
+  }
+  
+  // Now fetch all assessments for the resolved studentId
+  const assessments = await getAssessmentsByStudentId(targetStudentId);
 
-  if (!assessment) {
+  if (!assessments || assessments.length === 0) {
     notFound();
   }
 
-  return <AssessmentDetailClient assessment={assessment} />;
+  return <AssessmentDetailClient assessments={assessments} />;
 }

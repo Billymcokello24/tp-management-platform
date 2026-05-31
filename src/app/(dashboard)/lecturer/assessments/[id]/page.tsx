@@ -21,10 +21,22 @@ export default async function LecturerAssessmentDetailPage({ params }: PageProps
 
   if (!lecturer) notFound();
 
-  const assessment = await prisma.assessment.findUnique({
+  // First, check if the ID passed is actually an Assessment ID (for backward compatibility)
+  let targetStudentId = id;
+  const possibleAssessment = await prisma.assessment.findUnique({
+    where: { id },
+    select: { studentId: true }
+  });
+  
+  if (possibleAssessment) {
+    targetStudentId = possibleAssessment.studentId;
+  }
+
+  // Now fetch all assessments for this student conducted by this lecturer
+  const assessments = await prisma.assessment.findMany({
     where: { 
-      id,
-      lecturerId: lecturer.id // Ensure they can only view their own assessments
+      studentId: targetStudentId,
+      lecturerId: lecturer.id
     },
     include: {
       student: {
@@ -39,11 +51,12 @@ export default async function LecturerAssessmentDetailPage({ params }: PageProps
         },
       },
     },
+    orderBy: { createdAt: "asc" },
   });
 
-  if (!assessment) {
+  if (!assessments || assessments.length === 0) {
     notFound();
   }
 
-  return <AssessmentDetailClient assessment={assessment} />;
+  return <AssessmentDetailClient assessments={assessments} />;
 }

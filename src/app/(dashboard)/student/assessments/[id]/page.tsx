@@ -8,7 +8,7 @@ interface PageProps {
 }
 
 export default async function StudentAssessmentDetailPage({ params }: PageProps) {
-  const { id } = await params;
+  const { id } = await params; // This is technically the student ID, which should match their own ID
   
   const session = await auth();
   if (!session?.user?.id || (session.user as any).role !== "STUDENT") {
@@ -19,12 +19,25 @@ export default async function StudentAssessmentDetailPage({ params }: PageProps)
     where: { userId: session.user.id }
   });
 
-  if (!student) notFound();
+  // First, check if the ID passed is actually an Assessment ID
+  let targetStudentId = id;
+  const possibleAssessment = await prisma.assessment.findUnique({
+    where: { id },
+    select: { studentId: true }
+  });
+  
+  if (possibleAssessment) {
+    targetStudentId = possibleAssessment.studentId;
+  }
 
-  const assessment = await prisma.assessment.findUnique({
+  if (!student || student.id !== targetStudentId) {
+    notFound(); // Security: Ensure student is only viewing their own assessments
+  }
+
+  const assessments = await prisma.assessment.findMany({
     where: { 
-      id,
-      studentId: student.id // Ensure they can only view their own assessments
+      studentId: targetStudentId,
+      status: "REVIEWED"
     },
     include: {
       student: {
@@ -39,11 +52,12 @@ export default async function StudentAssessmentDetailPage({ params }: PageProps)
         },
       },
     },
+    orderBy: { createdAt: "asc" },
   });
 
-  if (!assessment) {
+  if (!assessments || assessments.length === 0) {
     notFound();
   }
 
-  return <AssessmentDetailClient assessment={assessment} />;
+  return <AssessmentDetailClient assessments={assessments} />;
 }

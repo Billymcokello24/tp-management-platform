@@ -59,3 +59,26 @@ export async function getAssessmentById(id: string) {
   });
 }
 
+/**
+ * Fetch ALL assessments for a given student, ordered by creation date ascending.
+ * Used for the unified 3-column assessment detail view.
+ */
+export async function getAssessmentsByStudentId(studentId: string) {
+  return prisma.assessment.findMany({
+    where: { studentId },
+    include: {
+      student: {
+        include: {
+          user: { select: { name: true, email: true } },
+          school: { select: { name: true, county: true } },
+        },
+      },
+      lecturer: {
+        include: {
+          user: { select: { name: true, email: true } },
+        },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+}
