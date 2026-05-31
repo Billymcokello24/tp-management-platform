@@ -66,7 +66,7 @@ export async function getMyStudents() {
             include: {
               user: { select: { name: true, email: true, phone: true } },
               school: { select: { name: true, county: true } },
-              assessments: { where: { status: "REVIEWED" } }
+              assessments: { select: { id: true, status: true, totalMarks: true, grade: true, createdAt: true }, orderBy: { createdAt: "asc" as const } }
             }
           }
         }

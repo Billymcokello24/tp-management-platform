@@ -373,7 +373,15 @@ export async function bulkCreateLecturers(
 export async function getSchools() {
   return prisma.school.findMany({
     include: {
-      students: true,
+      students: {
+        include: {
+          user: { select: { name: true } },
+          assessments: {
+            where: { status: "REVIEWED" },
+            select: { id: true, totalMarks: true }
+          }
+        }
+      },
       zone: true,
     },
     orderBy: { name: "asc" },

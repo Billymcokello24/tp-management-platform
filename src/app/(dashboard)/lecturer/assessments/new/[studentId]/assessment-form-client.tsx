@@ -1,418 +1,414 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Save, ArrowLeft, MapPin, Loader2, ShieldCheck, ShieldAlert, RefreshCw, WifiOff } from "lucide-react";
+import { Save, ArrowLeft, MapPin, Loader2, ShieldCheck, ShieldAlert, RefreshCw, WifiOff, Lock, CheckCircle2, Circle, ChevronDown, ChevronUp, Eye } from "lucide-react";
 import { submitAssessment } from "../../../_actions/assessments";
 import { useGeolocation } from "@/hooks/use-geolocation";
 import { checkGeofence } from "@/lib/geofence";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import Link from "next/link";
 
-export function AssessmentFormClient({ student, lecturerId }: { student: any; lecturerId: string }) {
+interface SerializedAssessment {
+  id: string;
+  status: string;
+  totalMarks: number;
+  grade: string;
+  performanceBand: string;
+  createdAt: string;
+  [key: string]: any;
+}
+
+const MARK_FIELDS = [
+  "schemeOfWorkMark","lessonPlanObjectives","lessonPlanActivities","lessonPlanSequence",
+  "introductionMark","logicalPresentation","contentRelevance","contentAdequacy",
+  "teachingStrategies","teachingSkills","contentMastery","communicationMark",
+  "chalkboardUse","resourceTiming","resourceAppropriateness","resourceInnovativeness",
+  "learnerControl","learnerParticipation","groupWork","teacherLearnerRapport",
+  "closureSkills","concludingActivities","assignmentMark","personalityMark","selfAppraisalMark",
+];
+
+const DEFAULT_MARKS: Record<string, number> = Object.fromEntries(MARK_FIELDS.map(f => [f, 0]));
+
+export function AssessmentFormClient({ student, lecturerId, existingAssessments }: {
+  student: any; lecturerId: string; existingAssessments: SerializedAssessment[];
+}) {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
   const geo = useGeolocation();
+  const [loading, setLoading] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
   const [isCheckedIn, setIsCheckedIn] = useState(false);
   const [checkInTime, setCheckInTime] = useState<Date | null>(null);
+  const [viewingIdx, setViewingIdx] = useState<number | null>(null);
 
-  // Determine geofence status
+  // ── Progression Logic ──
+  const submitted = existingAssessments.filter(a => a.status === "REVIEWED");
+  const draft = existingAssessments.find(a => a.status === "DRAFT");
+  const completedCount = submitted.length;
+  const activeNumber = Math.min(completedCount + 1, 4); // 1, 2, 3, or 4 (all done)
+  const allDone = completedCount >= 3;
+
+  // Initialize marks from draft if it exists
+  const initialMarks = draft
+    ? Object.fromEntries(MARK_FIELDS.map(f => [f, draft[f] || 0]))
+    : { ...DEFAULT_MARKS };
+
+  const [marks, setMarks] = useState<Record<string, number>>(initialMarks);
+  const [comments, setComments] = useState({
+    areasOfStrength: draft?.areasOfStrength || "",
+    areasOfImprovement: draft?.areasOfImprovement || "",
+    generalComments: draft?.generalComments || "",
+  });
+
+  const totalMarks = useMemo(() => Object.values(marks).reduce((a, b) => a + (Number(b) || 0), 0), [marks]);
+
+  // Geofence
   const schoolHasGPS = student.schoolLatitude !== null && student.schoolLongitude !== null;
   const geofenceResult = (schoolHasGPS && geo.position)
-    ? checkGeofence(
-        geo.position.latitude,
-        geo.position.longitude,
-        student.schoolLatitude,
-        student.schoolLongitude,
-        student.schoolGeofenceRadius
-      )
+    ? checkGeofence(geo.position.latitude, geo.position.longitude, student.schoolLatitude, student.schoolLongitude, student.schoolGeofenceRadius)
     : null;
-
-  const canAssess = schoolHasGPS && geofenceResult?.isInside;
-
-  const [marks, setMarks] = useState({
-    schemeOfWorkMark: 0,
-    lessonPlanObjectives: 0,
-    lessonPlanActivities: 0,
-    lessonPlanSequence: 0,
-    introductionMark: 0,
-    logicalPresentation: 0,
-    contentRelevance: 0,
-    contentAdequacy: 0,
-    teachingStrategies: 0,
-    teachingSkills: 0,
-    contentMastery: 0,
-    communicationMark: 0,
-    chalkboardUse: 0,
-    resourceTiming: 0,
-    resourceAppropriateness: 0,
-    resourceInnovativeness: 0,
-    learnerControl: 0,
-    learnerParticipation: 0,
-    groupWork: 0,
-    teacherLearnerRapport: 0,
-    closureSkills: 0,
-    concludingActivities: 0,
-    assignmentMark: 0,
-    personalityMark: 0,
-    selfAppraisalMark: 0,
-  });
-
-  const [comments, setComments] = useState({
-    areasOfStrength: "",
-    areasOfImprovement: "",
-    generalComments: "",
-  });
-
-  const totalMarks = Object.values(marks).reduce((a, b) => a + (Number(b) || 0), 0);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>, max: number) => {
     let val = parseInt(e.target.value) || 0;
-    if (val > max) val = max; // Enforce max constraints
+    if (val > max) val = max;
     if (val < 0) val = 0;
     setMarks({ ...marks, [e.target.name]: val });
   };
 
-  const handleSubmit = async () => {
-    if (totalMarks > 100) {
-      toast.error("Total marks cannot exceed 100");
-      return;
-    }
-
-    // Build GPS verification data
-    let gpsData: {
-      submissionLatitude?: number;
-      submissionLongitude?: number;
-      isGeoVerified: boolean;
-      geoVerificationNote: string;
-    } = {
-      isGeoVerified: false,
-      geoVerificationNote: "No GPS data available",
-    };
-
+  const buildGPSData = () => {
+    let gpsData: any = { isGeoVerified: false, geoVerificationNote: "No GPS data available" };
     if (geo.position) {
       gpsData.submissionLatitude = geo.position.latitude;
       gpsData.submissionLongitude = geo.position.longitude;
-
       const locLabel = geo.position.locationName || `${geo.position.latitude.toFixed(5)}, ${geo.position.longitude.toFixed(5)}`;
-
       if (geofenceResult) {
         gpsData.isGeoVerified = geofenceResult.isInside;
         gpsData.geoVerificationNote = geofenceResult.isInside
-          ? `Verified at ${locLabel} — ${geofenceResult.distanceFormatted} from school (within ${student.schoolGeofenceRadius}m radius). Accuracy: ${Math.round(geo.position.accuracy)}m.`
-          : `Outside geofence at ${locLabel} — ${geofenceResult.distanceFormatted} from school (${student.schoolGeofenceRadius}m radius). Accuracy: ${Math.round(geo.position.accuracy)}m.`;
+          ? `Verified at ${locLabel} — ${geofenceResult.distanceFormatted} from school. Accuracy: ${Math.round(geo.position.accuracy)}m.`
+          : `Outside geofence at ${locLabel} — ${geofenceResult.distanceFormatted} from school. Accuracy: ${Math.round(geo.position.accuracy)}m.`;
       } else {
         gpsData.geoVerificationNote = `Location: ${locLabel}. School has no GPS coordinates configured.`;
       }
     } else if (geo.error) {
       gpsData.geoVerificationNote = `GPS error: ${geo.error}`;
     }
+    return gpsData;
+  };
 
-    // STRICT GEOFENCE LOCK
+  const handleSaveDraft = async () => {
+    setSavingDraft(true);
+    try {
+      const payload = { id: draft?.id, studentId: student.id, lecturerId, status: "DRAFT", checkInTime: checkInTime?.toISOString(), ...marks, ...comments, ...buildGPSData() };
+      await submitAssessment(payload);
+      toast.success("Draft saved!");
+      router.refresh();
+    } catch (e: any) { toast.error(e.message || "Failed to save draft"); }
+    finally { setSavingDraft(false); }
+  };
+
+  const handleSubmit = async () => {
+    if (totalMarks > 100) { toast.error("Total marks cannot exceed 100"); return; }
     if (schoolHasGPS && geofenceResult && !geofenceResult.isInside) {
-      toast.error(`You must be physically present at the assigned school before submitting this assessment. (${student.schoolGeofenceRadius}m radius)`);
+      toast.error(`You must be physically present at the assigned school. (${student.schoolGeofenceRadius}m radius)`);
       return;
     }
-    
-    if (schoolHasGPS && !isCheckedIn) {
-      toast.error("Please click 'Check In' to verify your location before assessing.");
-      return;
-    }
+    if (schoolHasGPS && !isCheckedIn) { toast.error("Please click 'Check In' to verify your location."); return; }
 
     setLoading(true);
     try {
-      const payload = {
-        studentId: student.id,
-        lecturerId,
-        checkInTime: checkInTime ? checkInTime.toISOString() : new Date().toISOString(),
-        ...marks,
-        ...comments,
-        ...gpsData,
-      };
-      
+      const payload = { id: draft?.id, studentId: student.id, lecturerId, status: "REVIEWED", checkInTime: checkInTime?.toISOString() || new Date().toISOString(), ...marks, ...comments, ...buildGPSData() };
       const res = await submitAssessment(payload);
-      if (res.success) {
-        toast.success("Assessment submitted successfully!");
-        router.push(`/lecturer/assessments/${res.id}`);
-      }
-    } catch (error: any) {
-      toast.error(error.message || "Failed to submit assessment");
-    } finally {
-      setLoading(false);
-    }
+      if (res.success) { toast.success(`Assessment ${activeNumber} submitted!`); router.push(`/lecturer/assessments/${res.id}`); }
+    } catch (e: any) { toast.error(e.message || "Failed to submit"); }
+    finally { setLoading(false); }
   };
 
-  const InputRow = ({ label, name, max }: { label: string, name: string, max: number }) => (
+  const InputRow = ({ label, name, max, disabled }: { label: string; name: string; max: number; disabled?: boolean }) => (
     <div className="flex items-center justify-between py-2 border-b last:border-0 border-border/50">
-      <Label htmlFor={name} className="flex-1 font-normal">{label} (Max {max})</Label>
-      <div className="w-24 flex items-center gap-2">
-        <Input 
-          id={name}
-          name={name}
-          type="number"
-          min="0"
-          max={max}
-          value={(marks as any)[name] || ""}
-          onChange={(e) => handleChange(e, max)}
-          className="text-center font-mono"
-        />
+      <Label htmlFor={name} className="flex-1 font-normal text-xs sm:text-sm">{label} <span className="text-muted-foreground">(Max {max})</span></Label>
+      <div className="w-20 sm:w-24">
+        <Input id={name} name={name} type="number" min="0" max={max} value={(marks as any)[name] || ""} onChange={(e) => handleChange(e, max)} className="text-center font-mono" disabled={disabled} />
       </div>
     </div>
   );
 
+  // ── Step tracker items ──
+  const steps = [1, 2, 3].map(num => {
+    const existing = submitted[num - 1];
+    if (existing) return { num, state: "completed" as const, score: existing.totalMarks, grade: existing.grade, id: existing.id };
+    if (num === activeNumber && !allDone) return { num, state: "active" as const, score: null, grade: null, id: draft?.id || null };
+    return { num, state: "locked" as const, score: null, grade: null, id: null };
+  });
+
   return (
-    <div className="space-y-6 max-w-4xl pb-20">
+    <div className="space-y-6 max-w-4xl pb-24">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={() => router.back()} size="sm" className="mb-2">
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back
-        </Button>
+        <Button variant="ghost" onClick={() => router.back()} size="sm" className="mb-2"><ArrowLeft className="h-4 w-4 mr-2" /> Back</Button>
       </div>
 
       <div>
-        <h1 className="text-4xl font-extrabold tracking-tight text-foreground">Assess Student</h1>
-        <p className="text-muted-foreground mt-1 font-medium">Complete the Tom Mboya Teaching Practice Rubric for {student.name}.</p>
+        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">Assess Student</h1>
+        <p className="text-muted-foreground mt-1 font-medium text-sm">Tom Mboya University Teaching Practice Rubric for {student.name}.</p>
       </div>
 
-      <div className="bg-primary/5 p-4 rounded-2xl border border-primary/20 flex flex-wrap gap-x-8 gap-y-2">
-        <div><span className="font-semibold text-muted-foreground text-sm">Student:</span> {student.name}</div>
-        <div><span className="font-semibold text-muted-foreground text-sm">Adm No:</span> {student.admissionNumber}</div>
-        <div><span className="font-semibold text-muted-foreground text-sm">Course:</span> {student.course}</div>
+      {/* Student info bar */}
+      <div className="bg-primary/5 p-3 sm:p-4 rounded-2xl border border-primary/20 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+        <div><span className="font-semibold text-muted-foreground">Student:</span> {student.name}</div>
+        <div><span className="font-semibold text-muted-foreground">Adm No:</span> {student.admissionNumber}</div>
+        <div><span className="font-semibold text-muted-foreground">Course:</span> {student.course}</div>
       </div>
 
-      {/* ── GPS / Geofence Status Card ── */}
-      <Card className="border-2 border-dashed">
+      {/* ── 3-STEP ASSESSMENT TRACKER ── */}
+      <Card className="border-2 border-primary/20">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <MapPin className="h-4 w-4" />
-            Location Verification
-          </CardTitle>
-          <CardDescription className="text-xs">
-            Your GPS location is recorded for accountability and audit purposes.
-          </CardDescription>
+          <CardTitle className="text-sm">Assessment Progression</CardTitle>
+          <CardDescription className="text-xs">Each student requires 3 assessments. They unlock sequentially.</CardDescription>
         </CardHeader>
         <CardContent>
-          {geo.loading ? (
-            <div className="flex items-center gap-3 text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="text-sm">Acquiring GPS signal...</span>
-            </div>
-          ) : geo.error ? (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3 text-amber-600">
-                <WifiOff className="h-4 w-4" />
-                <div>
-                  <p className="text-sm font-medium">GPS Unavailable</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{geo.error}</p>
-                </div>
+          <div className="flex items-center gap-2 sm:gap-4">
+            {steps.map((step, i) => (
+              <div key={step.num} className="flex items-center gap-2 sm:gap-4 flex-1">
+                <button
+                  onClick={() => step.state === "completed" ? setViewingIdx(viewingIdx === i ? null : i) : null}
+                  disabled={step.state === "locked"}
+                  className={`flex-1 flex flex-col items-center gap-1 p-2 sm:p-3 rounded-xl border-2 transition-all text-center ${
+                    step.state === "completed" ? "border-emerald-300 bg-emerald-50 dark:bg-emerald-950/20 dark:border-emerald-800 cursor-pointer hover:shadow-md" :
+                    step.state === "active" ? "border-primary bg-primary/5 ring-2 ring-primary/20 shadow-sm" :
+                    "border-border/40 bg-muted/30 opacity-50 cursor-not-allowed"
+                  }`}
+                >
+                  {step.state === "completed" ? <CheckCircle2 className="h-5 w-5 text-emerald-600" /> :
+                   step.state === "active" ? <Circle className="h-5 w-5 text-primary" /> :
+                   <Lock className="h-5 w-5 text-muted-foreground" />}
+                  <span className="text-xs font-bold">A{step.num}</span>
+                  {step.state === "completed" && <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">{step.score}/100 ({step.grade})</span>}
+                  {step.state === "active" && <span className="text-[10px] font-semibold text-primary">{draft ? "Draft" : "Ready"}</span>}
+                  {step.state === "locked" && <span className="text-[10px] text-muted-foreground">Locked</span>}
+                </button>
+                {i < 2 && <div className={`w-6 sm:w-10 h-0.5 shrink-0 ${step.state === "completed" ? "bg-emerald-400" : "bg-border"}`} />}
               </div>
-              <Button variant="outline" size="sm" onClick={geo.refresh}>
-                <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry
-              </Button>
-            </div>
-          ) : geo.position ? (
-            <div className="space-y-3">
+            ))}
+          </div>
+
+          {/* Viewing a completed assessment inline */}
+          {viewingIdx !== null && steps[viewingIdx]?.state === "completed" && (
+            <div className="mt-4 p-4 rounded-xl bg-muted/40 border space-y-2">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <MapPin className="h-3.5 w-3.5" />
-                  <span className="font-medium text-foreground">{geo.position.locationName || "Resolving location..."}</span>
-                  <span className="text-[10px] font-mono ml-1">({geo.position.latitude.toFixed(4)}, {geo.position.longitude.toFixed(4)}) ±{Math.round(geo.position.accuracy)}m</span>
-                </div>
-                <Button variant="ghost" size="sm" onClick={geo.refresh} className="h-7 px-2">
-                  <RefreshCw className="h-3 w-3" />
-                </Button>
+                <h4 className="text-sm font-bold">Assessment {steps[viewingIdx].num} — {steps[viewingIdx].grade} ({steps[viewingIdx].score}/100)</h4>
+                <Button variant="ghost" size="sm" onClick={() => setViewingIdx(null)}><ChevronUp className="h-4 w-4" /></Button>
               </div>
-
-                {schoolHasGPS && geofenceResult ? (
-                  geofenceResult.isInside ? (
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-3 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 px-4 py-3 rounded-xl border border-emerald-200 dark:border-emerald-800">
-                        <ShieldCheck className="h-5 w-5 flex-shrink-0" />
-                        <div>
-                          <p className="text-sm font-semibold">Location Verified</p>
-                          <p className="text-xs opacity-80 mt-0.5">You are {geofenceResult.distanceFormatted} from {student.schoolName} (within {student.schoolGeofenceRadius}m radius).</p>
-                        </div>
-                      </div>
-                      
-                      {!isCheckedIn ? (
-                        <Button 
-                          onClick={() => {
-                            setIsCheckedIn(true);
-                            setCheckInTime(new Date());
-                            toast.success("Successfully checked in at the school.");
-                          }}
-                          className="w-full sm:w-auto"
-                        >
-                          <MapPin className="h-4 w-4 mr-2" /> Check In
-                        </Button>
-                      ) : (
-                        <div className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                          Checked in at: {checkInTime?.toLocaleTimeString()}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-3 bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 px-4 py-3 rounded-xl border border-red-200 dark:border-red-800">
-                      <ShieldAlert className="h-5 w-5 flex-shrink-0" />
-                      <div>
-                        <p className="text-sm font-semibold">Outside School Geofence</p>
-                        <p className="text-xs opacity-80 mt-0.5">You are {geofenceResult.distanceFormatted} away from {student.schoolName}. You must be physically present at the assigned school before submitting this assessment.</p>
-                      </div>
-                    </div>
-                  )
-              ) : !schoolHasGPS ? (
-                <div className="flex items-center gap-3 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 px-4 py-3 rounded-xl border border-blue-200 dark:border-blue-800">
-                  <MapPin className="h-5 w-5 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-semibold">GPS Captured</p>
-                    <p className="text-xs opacity-80 mt-0.5">School GPS coordinates not yet configured. Your location is still recorded for records.</p>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
-
-      <div className="transition-all duration-300">
-        <Card>
-        <CardHeader className="bg-muted/30 border-b border-border/50">
-          <CardTitle>A. Preparation (12 Marks)</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <InputRow label="Scheme of Work" name="schemeOfWorkMark" max={2} />
-          <InputRow label="Lesson Plan: Objectives" name="lessonPlanObjectives" max={4} />
-          <InputRow label="Lesson Plan: Activities" name="lessonPlanActivities" max={2} />
-          <InputRow label="Lesson Plan: Sequence" name="lessonPlanSequence" max={4} />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="bg-muted/30 border-b border-border/50">
-          <CardTitle>B. Presentation (80 Marks)</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-6 space-y-6">
-          <div>
-            <h4 className="font-semibold text-sm mb-2 text-muted-foreground">1. Introduction (5)</h4>
-            <InputRow label="Set Induction Skills" name="introductionMark" max={5} />
-          </div>
-          <div>
-            <h4 className="font-semibold text-sm mb-2 text-muted-foreground">2. Lesson Development (30)</h4>
-            <InputRow label="Logical Presentations of Contents" name="logicalPresentation" max={5} />
-            <InputRow label="Relevance of Content" name="contentRelevance" max={5} />
-            <InputRow label="Adequacy of Content to Time" name="contentAdequacy" max={5} />
-            <InputRow label="Teaching Strategies & Methods" name="teachingStrategies" max={5} />
-            <InputRow label="Teaching Skills (Motivation, Questioning)" name="teachingSkills" max={5} />
-            <InputRow label="Mastery of Content" name="contentMastery" max={5} />
-          </div>
-          <div>
-            <h4 className="font-semibold text-sm mb-2 text-muted-foreground">3. Communication (5)</h4>
-            <InputRow label="Verbal & Non-verbal Communication" name="communicationMark" max={5} />
-          </div>
-          <div>
-            <h4 className="font-semibold text-sm mb-2 text-muted-foreground">4. Resource Materials (15)</h4>
-            <InputRow label="Chalkboard Layout & Use" name="chalkboardUse" max={3} />
-            <InputRow label="Timing and Attractiveness" name="resourceTiming" max={3} />
-            <InputRow label="Appropriateness" name="resourceAppropriateness" max={4} />
-            <InputRow label="Innovativeness & Originality" name="resourceInnovativeness" max={5} />
-          </div>
-          <div>
-            <h4 className="font-semibold text-sm mb-2 text-muted-foreground">5. Classroom Management (20)</h4>
-            <InputRow label="Control and Knowledge of Learners" name="learnerControl" max={5} />
-            <InputRow label="Learner Participation" name="learnerParticipation" max={5} />
-            <InputRow label="Group Work / Individual Differences" name="groupWork" max={4} />
-            <InputRow label="Teacher/Learner Rapport" name="teacherLearnerRapport" max={5} />
-          </div>
-          <div>
-            <h4 className="font-semibold text-sm mb-2 text-muted-foreground">6. Conclusion (5)</h4>
-            <InputRow label="Closure Skills (Review, Questions)" name="closureSkills" max={2} />
-            <InputRow label="Concluding Activities (Evaluation)" name="concludingActivities" max={2} />
-            <InputRow label="Assignment" name="assignmentMark" max={1} />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="bg-muted/30 border-b border-border/50">
-          <CardTitle>C. Teacher Personality (5 Marks)</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <InputRow label="Confidence, Dressing, Mannerisms" name="personalityMark" max={5} />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="bg-muted/30 border-b border-border/50">
-          <CardTitle>D. Self Appraisal (3 Marks)</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <InputRow label="Use of Previous Comments" name="selfAppraisalMark" max={3} />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="bg-muted/30 border-b border-border/50">
-          <CardTitle>Evaluator Comments</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-6 space-y-4">
-          <div className="space-y-2">
-            <Label>Areas of Strength</Label>
-            <Textarea 
-              value={comments.areasOfStrength}
-              onChange={(e) => setComments({...comments, areasOfStrength: e.target.value})}
-              placeholder="E.g., Excellent classroom presence..."
-              rows={3}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Areas of Improvement</Label>
-            <Textarea 
-              value={comments.areasOfImprovement}
-              onChange={(e) => setComments({...comments, areasOfImprovement: e.target.value})}
-              placeholder="E.g., Needs to manage time better during group work..."
-              rows={3}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>General Comments</Label>
-            <Textarea 
-              value={comments.generalComments}
-              onChange={(e) => setComments({...comments, generalComments: e.target.value})}
-              placeholder="Overall feedback..."
-              rows={4}
-            />
-          </div>
-        </CardContent>
-      </Card>
-      </div>
-
-      <div className="sticky bottom-0 bg-background/80 backdrop-blur-md border-t p-4 -mx-6 px-6 sm:-mx-8 sm:px-8 mt-8 flex items-center justify-between z-10">
-        <div>
-          <p className="text-sm font-semibold uppercase text-muted-foreground">Total Score</p>
-          <p className={`text-3xl font-bold ${totalMarks >= 70 ? "text-emerald-600" : totalMarks < 40 ? "text-red-500" : "text-primary"}`}>
-            {totalMarks} <span className="text-xl text-muted-foreground font-normal">/ 100</span>
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {/* Geofence micro-badge in the submit bar */}
-          {geo.position && geofenceResult && (
-            <div className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
-              geofenceResult.isInside 
-                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400" 
-                : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
-            }`}>
-              {geofenceResult.isInside ? <ShieldCheck className="h-3.5 w-3.5" /> : <ShieldAlert className="h-3.5 w-3.5" />}
-              {geofenceResult.distanceFormatted}
+              <p className="text-xs text-muted-foreground">Submitted on {new Date(submitted[viewingIdx].createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</p>
+              <Link href={`/lecturer/assessments/${steps[viewingIdx].id}`}>
+                <Button variant="outline" size="sm" className="mt-2"><Eye className="h-4 w-4 mr-2" /> View Full Report</Button>
+              </Link>
             </div>
           )}
-          <Button size="lg" onClick={handleSubmit} disabled={loading} className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-sm font-semibold">
-            {loading ? "Submitting..." : <><Save className="h-4 w-4 mr-2" /> Submit Final Assessment</>}
-          </Button>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
+
+      {/* ── ALL DONE STATE ── */}
+      {allDone ? (
+        <Card className="border-emerald-300 bg-emerald-50/50 dark:bg-emerald-950/20">
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <CheckCircle2 className="h-12 w-12 text-emerald-600 mb-4" />
+            <h2 className="text-xl font-bold text-emerald-800 dark:text-emerald-300">All 3 Assessments Completed</h2>
+            <p className="text-sm text-muted-foreground mt-2 max-w-md">
+              Average Score: <span className="font-bold text-foreground">{Math.round(submitted.reduce((s, a) => s + a.totalMarks, 0) / 3)}/100</span>
+            </p>
+            <Button variant="outline" className="mt-6" onClick={() => router.push("/lecturer/students")}>← Back to Students</Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {/* Active Assessment Label */}
+          <div className="flex items-center gap-3 bg-primary/5 px-4 py-3 rounded-xl border border-primary/20">
+            <Circle className="h-4 w-4 text-primary fill-primary" />
+            <span className="text-sm font-bold text-primary">Currently Assessing: Assessment {activeNumber}</span>
+            {draft && <span className="ml-auto text-xs text-muted-foreground bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full font-semibold">Draft Loaded</span>}
+          </div>
+
+          {/* ── GPS / Geofence ── */}
+          <Card className="border-2 border-dashed">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2"><MapPin className="h-4 w-4" /> Location Verification</CardTitle>
+              <CardDescription className="text-xs">Your GPS location is recorded for accountability and audit purposes.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {geo.loading ? (
+                <div className="flex items-center gap-3 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /><span className="text-sm">Acquiring GPS signal...</span></div>
+              ) : geo.error ? (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 text-amber-600"><WifiOff className="h-4 w-4" /><div><p className="text-sm font-medium">GPS Unavailable</p><p className="text-xs text-muted-foreground mt-0.5">{geo.error}</p></div></div>
+                  <Button variant="outline" size="sm" onClick={geo.refresh}><RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry</Button>
+                </div>
+              ) : geo.position ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <MapPin className="h-3.5 w-3.5" />
+                      <span className="font-medium text-foreground">{geo.position.locationName || "Resolving..."}</span>
+                      <span className="text-[10px] font-mono">({geo.position.latitude.toFixed(4)}, {geo.position.longitude.toFixed(4)}) ±{Math.round(geo.position.accuracy)}m</span>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={geo.refresh} className="h-7 px-2"><RefreshCw className="h-3 w-3" /></Button>
+                  </div>
+                  {schoolHasGPS && geofenceResult ? (
+                    geofenceResult.isInside ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 px-4 py-3 rounded-xl border border-emerald-200 dark:border-emerald-800">
+                          <ShieldCheck className="h-5 w-5 flex-shrink-0" />
+                          <div><p className="text-sm font-semibold">Location Verified</p><p className="text-xs opacity-80 mt-0.5">You are {geofenceResult.distanceFormatted} from {student.schoolName}.</p></div>
+                        </div>
+                        {!isCheckedIn ? (
+                          <Button onClick={() => { setIsCheckedIn(true); setCheckInTime(new Date()); toast.success("Checked in!"); }} className="w-full sm:w-auto"><MapPin className="h-4 w-4 mr-2" /> Check In</Button>
+                        ) : (
+                          <div className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Checked in at: {checkInTime?.toLocaleTimeString()}</div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-3 bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 px-4 py-3 rounded-xl border border-red-200 dark:border-red-800">
+                        <ShieldAlert className="h-5 w-5 flex-shrink-0" />
+                        <div><p className="text-sm font-semibold">Outside School Geofence</p><p className="text-xs opacity-80 mt-0.5">You are {geofenceResult.distanceFormatted} away. You must be physically present.</p></div>
+                      </div>
+                    )
+                  ) : !schoolHasGPS ? (
+                    <div className="flex items-center gap-3 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 px-4 py-3 rounded-xl border border-blue-200 dark:border-blue-800">
+                      <MapPin className="h-5 w-5 flex-shrink-0" />
+                      <div><p className="text-sm font-semibold">GPS Captured</p><p className="text-xs opacity-80 mt-0.5">School GPS not configured. Your location is still recorded.</p></div>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
+
+          {/* ── RUBRIC FORM ── */}
+          <Accordion defaultValue={["preparation"]} className="w-full space-y-4">
+            
+            {/* A. Preparation */}
+            <AccordionItem value="preparation" className="border rounded-xl bg-card overflow-hidden">
+              <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-muted/30">
+                <div className="text-left w-full flex items-center justify-between pr-4">
+                  <div>
+                    <h3 className="font-semibold text-lg">A. Preparation (12 Marks)</h3>
+                    <p className="text-sm font-normal text-muted-foreground mt-1">Scheme of work and lesson planning.</p>
+                  </div>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="px-6 pb-6 pt-2">
+                <InputRow label="Scheme of Work" name="schemeOfWorkMark" max={2} />
+                <InputRow label="Lesson Plan: Objectives" name="lessonPlanObjectives" max={4} />
+                <InputRow label="Lesson Plan: Activities" name="lessonPlanActivities" max={2} />
+                <InputRow label="Lesson Plan: Sequence" name="lessonPlanSequence" max={4} />
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* B. Presentation */}
+            <AccordionItem value="presentation" className="border rounded-xl bg-card overflow-hidden">
+              <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-muted/30">
+                <div className="text-left w-full flex items-center justify-between pr-4">
+                  <div>
+                    <h3 className="font-semibold text-lg">B. Presentation (80 Marks)</h3>
+                    <p className="text-sm font-normal text-muted-foreground mt-1">Introduction, development, communication, and management.</p>
+                  </div>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="px-6 pb-6 pt-2 space-y-8">
+                <div><h4 className="font-bold text-sm mb-3 bg-muted/50 p-2 rounded-lg">1. Introduction (5)</h4><InputRow label="Set Induction Skills" name="introductionMark" max={5} /></div>
+                <div><h4 className="font-bold text-sm mb-3 bg-muted/50 p-2 rounded-lg">2. Lesson Development (30)</h4>
+                  <InputRow label="Logical Presentations" name="logicalPresentation" max={5} />
+                  <InputRow label="Relevance of Content" name="contentRelevance" max={5} />
+                  <InputRow label="Adequacy of Content" name="contentAdequacy" max={5} />
+                  <InputRow label="Teaching Strategies" name="teachingStrategies" max={5} />
+                  <InputRow label="Teaching Skills" name="teachingSkills" max={5} />
+                  <InputRow label="Mastery of Content" name="contentMastery" max={5} />
+                </div>
+                <div><h4 className="font-bold text-sm mb-3 bg-muted/50 p-2 rounded-lg">3. Communication (5)</h4><InputRow label="Verbal & Non-verbal" name="communicationMark" max={5} /></div>
+                <div><h4 className="font-bold text-sm mb-3 bg-muted/50 p-2 rounded-lg">4. Resource Materials (15)</h4>
+                  <InputRow label="Chalkboard Layout & Use" name="chalkboardUse" max={3} />
+                  <InputRow label="Timing and Attractiveness" name="resourceTiming" max={3} />
+                  <InputRow label="Appropriateness" name="resourceAppropriateness" max={4} />
+                  <InputRow label="Innovativeness" name="resourceInnovativeness" max={5} />
+                </div>
+                <div><h4 className="font-bold text-sm mb-3 bg-muted/50 p-2 rounded-lg">5. Classroom Management (20)</h4>
+                  <InputRow label="Control of Learners" name="learnerControl" max={5} />
+                  <InputRow label="Learner Participation" name="learnerParticipation" max={5} />
+                  <InputRow label="Group Work / Individual Diff." name="groupWork" max={4} />
+                  <InputRow label="Teacher/Learner Rapport" name="teacherLearnerRapport" max={5} />
+                </div>
+                <div><h4 className="font-bold text-sm mb-3 bg-muted/50 p-2 rounded-lg">6. Conclusion (5)</h4>
+                  <InputRow label="Closure Skills" name="closureSkills" max={2} />
+                  <InputRow label="Concluding Activities" name="concludingActivities" max={2} />
+                  <InputRow label="Assignment" name="assignmentMark" max={1} />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* C & D. Personality and Appraisal */}
+            <AccordionItem value="personality-appraisal" className="border rounded-xl bg-card overflow-hidden">
+              <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-muted/30">
+                <div className="text-left w-full flex items-center justify-between pr-4">
+                  <div>
+                    <h3 className="font-semibold text-lg">C & D. Personality & Appraisal (8 Marks)</h3>
+                    <p className="text-sm font-normal text-muted-foreground mt-1">Teacher traits and self-appraisal.</p>
+                  </div>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="px-6 pb-6 pt-2 space-y-6">
+                <div><h4 className="font-bold text-sm mb-3 bg-muted/50 p-2 rounded-lg">C. Teacher Personality (5)</h4><InputRow label="Confidence, Dressing, Mannerisms" name="personalityMark" max={5} /></div>
+                <div><h4 className="font-bold text-sm mb-3 bg-muted/50 p-2 rounded-lg">D. Self Appraisal (3)</h4><InputRow label="Use of Previous Comments" name="selfAppraisalMark" max={3} /></div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Evaluator Comments */}
+            <AccordionItem value="comments" className="border rounded-xl bg-primary/5 overflow-hidden border-primary/20">
+              <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-primary/10">
+                <div className="text-left w-full flex items-center justify-between pr-4">
+                  <div>
+                    <h3 className="font-semibold text-lg text-primary">Evaluator Comments</h3>
+                    <p className="text-sm font-normal text-primary/70 mt-1">Qualitative feedback on performance.</p>
+                  </div>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="px-6 pb-6 pt-2 space-y-4">
+                <div className="space-y-2"><Label>Areas of Strength</Label><Textarea value={comments.areasOfStrength} onChange={(e) => setComments({...comments, areasOfStrength: e.target.value})} placeholder="E.g., Excellent classroom presence..." rows={3} /></div>
+                <div className="space-y-2"><Label>Areas of Improvement</Label><Textarea value={comments.areasOfImprovement} onChange={(e) => setComments({...comments, areasOfImprovement: e.target.value})} placeholder="E.g., Needs better time management..." rows={3} /></div>
+                <div className="space-y-2"><Label>General Comments</Label><Textarea value={comments.generalComments} onChange={(e) => setComments({...comments, generalComments: e.target.value})} placeholder="Overall feedback..." rows={4} /></div>
+              </AccordionContent>
+            </AccordionItem>
+
+          </Accordion>
+
+          {/* ── Sticky Submit Bar ── */}
+          <div className="sticky bottom-0 bg-background/80 backdrop-blur-md border-t p-3 sm:p-4 -mx-6 px-4 sm:-mx-8 sm:px-8 mt-8 flex flex-col sm:flex-row items-center justify-between gap-3 z-10">
+            <div>
+              <p className="text-xs sm:text-sm font-semibold uppercase text-muted-foreground">Assessment {activeNumber} — Total</p>
+              <p className={`text-2xl sm:text-3xl font-bold ${totalMarks >= 70 ? "text-emerald-600" : totalMarks < 40 ? "text-red-500" : "text-primary"}`}>
+                {totalMarks} <span className="text-lg sm:text-xl text-muted-foreground font-normal">/ 100</span>
+              </p>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+              {geo.position && geofenceResult && (
+                <div className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${geofenceResult.isInside ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400" : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"}`}>
+                  {geofenceResult.isInside ? <ShieldCheck className="h-3.5 w-3.5" /> : <ShieldAlert className="h-3.5 w-3.5" />}
+                  {geofenceResult.distanceFormatted}
+                </div>
+              )}
+              <Button variant="outline" onClick={handleSaveDraft} disabled={savingDraft} className="flex-1 sm:flex-none rounded-xl">
+                {savingDraft ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />} Save Draft
+              </Button>
+              <Button size="lg" onClick={handleSubmit} disabled={loading} className="flex-1 sm:flex-none bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-sm font-semibold">
+                {loading ? "Submitting..." : `Submit A${activeNumber}`}
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -38,7 +38,12 @@ export async function getStudentForAssessment(studentId: string) {
     throw new Error("You are not authorized to assess this student.");
   }
 
-  return { student, lecturerId: lecturer.id };
+  const assessments = await prisma.assessment.findMany({
+    where: { studentId, lecturerId: lecturer.id },
+    orderBy: { createdAt: 'asc' }
+  });
+
+  return { student, lecturerId: lecturer.id, assessments };
 }
 
 export async function submitAssessment(data: any) {
@@ -47,15 +52,17 @@ export async function submitAssessment(data: any) {
     throw new Error("Unauthorized");
   }
 
+  const status = data.status || "REVIEWED";
+
   // Calculate total marks server-side as a safeguard
   const totalMarks = 
-    data.schemeOfWorkMark + data.lessonPlanObjectives + data.lessonPlanActivities + data.lessonPlanSequence +
-    data.introductionMark + data.logicalPresentation + data.contentRelevance + data.contentAdequacy +
-    data.teachingStrategies + data.teachingSkills + data.contentMastery + data.communicationMark +
-    data.chalkboardUse + data.resourceTiming + data.resourceAppropriateness + data.resourceInnovativeness +
-    data.learnerControl + data.learnerParticipation + data.groupWork + data.teacherLearnerRapport +
-    data.closureSkills + data.concludingActivities + data.assignmentMark +
-    data.personalityMark + data.selfAppraisalMark;
+    (data.schemeOfWorkMark || 0) + (data.lessonPlanObjectives || 0) + (data.lessonPlanActivities || 0) + (data.lessonPlanSequence || 0) +
+    (data.introductionMark || 0) + (data.logicalPresentation || 0) + (data.contentRelevance || 0) + (data.contentAdequacy || 0) +
+    (data.teachingStrategies || 0) + (data.teachingSkills || 0) + (data.contentMastery || 0) + (data.communicationMark || 0) +
+    (data.chalkboardUse || 0) + (data.resourceTiming || 0) + (data.resourceAppropriateness || 0) + (data.resourceInnovativeness || 0) +
+    (data.learnerControl || 0) + (data.learnerParticipation || 0) + (data.groupWork || 0) + (data.teacherLearnerRapport || 0) +
+    (data.closureSkills || 0) + (data.concludingActivities || 0) + (data.assignmentMark || 0) +
+    (data.personalityMark || 0) + (data.selfAppraisalMark || 0);
 
   let grade = "E";
   let band = "Below Average";
@@ -65,50 +72,58 @@ export async function submitAssessment(data: any) {
   else if (totalMarks >= 50) { grade = "C"; band = "Pass"; }
   else if (totalMarks >= 40) { grade = "D"; band = "Pass"; }
 
-  const assessment = await prisma.assessment.create({
-    data: {
-      studentId: data.studentId,
-      lecturerId: data.lecturerId,
-      status: "REVIEWED",
-      totalMarks,
-      grade,
-      performanceBand: band,
-      ...data.marks, // Spread the marks object if structured that way, or map them individually
-      schemeOfWorkMark: data.schemeOfWorkMark,
-      lessonPlanObjectives: data.lessonPlanObjectives,
-      lessonPlanActivities: data.lessonPlanActivities,
-      lessonPlanSequence: data.lessonPlanSequence,
-      introductionMark: data.introductionMark,
-      logicalPresentation: data.logicalPresentation,
-      contentRelevance: data.contentRelevance,
-      contentAdequacy: data.contentAdequacy,
-      teachingStrategies: data.teachingStrategies,
-      teachingSkills: data.teachingSkills,
-      contentMastery: data.contentMastery,
-      communicationMark: data.communicationMark,
-      chalkboardUse: data.chalkboardUse,
-      resourceTiming: data.resourceTiming,
-      resourceAppropriateness: data.resourceAppropriateness,
-      resourceInnovativeness: data.resourceInnovativeness,
-      learnerControl: data.learnerControl,
-      learnerParticipation: data.learnerParticipation,
-      groupWork: data.groupWork,
-      teacherLearnerRapport: data.teacherLearnerRapport,
-      closureSkills: data.closureSkills,
-      concludingActivities: data.concludingActivities,
-      assignmentMark: data.assignmentMark,
-      personalityMark: data.personalityMark,
-      selfAppraisalMark: data.selfAppraisalMark,
-      generalComments: data.generalComments,
-      areasOfStrength: data.areasOfStrength,
-      areasOfImprovement: data.areasOfImprovement,
-      // GPS verification
-      submissionLatitude: data.submissionLatitude ?? null,
-      submissionLongitude: data.submissionLongitude ?? null,
-      isGeoVerified: data.isGeoVerified ?? false,
-      geoVerificationNote: data.geoVerificationNote ?? null,
-    }
-  });
+  const payload = {
+    studentId: data.studentId,
+    lecturerId: data.lecturerId,
+    status: status,
+    totalMarks,
+    grade,
+    performanceBand: band,
+    schemeOfWorkMark: data.schemeOfWorkMark || 0,
+    lessonPlanObjectives: data.lessonPlanObjectives || 0,
+    lessonPlanActivities: data.lessonPlanActivities || 0,
+    lessonPlanSequence: data.lessonPlanSequence || 0,
+    introductionMark: data.introductionMark || 0,
+    logicalPresentation: data.logicalPresentation || 0,
+    contentRelevance: data.contentRelevance || 0,
+    contentAdequacy: data.contentAdequacy || 0,
+    teachingStrategies: data.teachingStrategies || 0,
+    teachingSkills: data.teachingSkills || 0,
+    contentMastery: data.contentMastery || 0,
+    communicationMark: data.communicationMark || 0,
+    chalkboardUse: data.chalkboardUse || 0,
+    resourceTiming: data.resourceTiming || 0,
+    resourceAppropriateness: data.resourceAppropriateness || 0,
+    resourceInnovativeness: data.resourceInnovativeness || 0,
+    learnerControl: data.learnerControl || 0,
+    learnerParticipation: data.learnerParticipation || 0,
+    groupWork: data.groupWork || 0,
+    teacherLearnerRapport: data.teacherLearnerRapport || 0,
+    closureSkills: data.closureSkills || 0,
+    concludingActivities: data.concludingActivities || 0,
+    assignmentMark: data.assignmentMark || 0,
+    personalityMark: data.personalityMark || 0,
+    selfAppraisalMark: data.selfAppraisalMark || 0,
+    generalComments: data.generalComments || "",
+    areasOfStrength: data.areasOfStrength || "",
+    areasOfImprovement: data.areasOfImprovement || "",
+    submissionLatitude: data.submissionLatitude ?? null,
+    submissionLongitude: data.submissionLongitude ?? null,
+    isGeoVerified: data.isGeoVerified ?? false,
+    geoVerificationNote: data.geoVerificationNote ?? null,
+  };
+
+  let assessment;
+  if (data.id) {
+    assessment = await prisma.assessment.update({
+      where: { id: data.id },
+      data: payload
+    });
+  } else {
+    assessment = await prisma.assessment.create({
+      data: payload
+    });
+  }
 
   revalidatePath("/lecturer/students");
   revalidatePath("/lecturer/dashboard");
