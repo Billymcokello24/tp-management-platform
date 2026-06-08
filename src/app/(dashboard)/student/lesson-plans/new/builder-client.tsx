@@ -92,7 +92,7 @@ export function BuilderClient() {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl pb-24">
+    <div className="space-y-6 w-[90%] mx-auto pb-24" style={{ width: '90%' }}>
       <div className="flex items-center gap-4">
         <Button variant="ghost" onClick={() => router.back()} size="sm" className="mb-2">
           <ArrowLeft className="h-4 w-4 mr-2" /> Back

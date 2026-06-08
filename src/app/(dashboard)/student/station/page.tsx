@@ -30,7 +30,7 @@ export default async function StudentSchoolPage() {
 
   if (!school) {
     return (
-      <div className="space-y-6 max-w-4xl pb-20">
+      <div className="space-y-6 w-[90%] mx-auto pb-20" style={{ width: '90%' }}>
         <PageHeader />
         <Card className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800/50 mb-6">
           <CardContent className="pt-6">
@@ -43,7 +43,7 @@ export default async function StudentSchoolPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl pb-20">
+    <div className="space-y-6 w-[90%] mx-auto pb-20" style={{ width: '90%' }}>
       <PageHeader />
 
       <StationSelectorClient currentSchool={school} availableSchools={availableSchools} />
