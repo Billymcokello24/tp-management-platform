@@ -315,7 +315,7 @@ export function AssessmentFormClient({ student, lecturerId, existingAssessments 
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-primary/5 p-4 rounded-xl border border-primary/20">
               <div className="flex-1 space-y-1">
                   <Label className="text-xs text-primary font-bold uppercase tracking-wider">Assessment Number</Label>
-                  <Select value={currentAssnNum} onValueChange={setCurrentAssnNum} disabled={isCurrentSlotSubmitted}>
+                  <Select value={currentAssnNum} onValueChange={(val) => setCurrentAssnNum(val || "1")} disabled={isCurrentSlotSubmitted}>
                       <SelectTrigger className="bg-background">
                           <SelectValue placeholder="Select Assessment" />
                       </SelectTrigger>
@@ -327,7 +327,7 @@ export function AssessmentFormClient({ student, lecturerId, existingAssessments 
               </div>
               <div className="flex-1 space-y-1">
                   <Label className="text-xs text-primary font-bold uppercase tracking-wider">Subject</Label>
-                  <Select value={currentSubject} onValueChange={setCurrentSubject} disabled={isCurrentSlotSubmitted}>
+                  <Select value={currentSubject} onValueChange={(val) => setCurrentSubject(val || "")} disabled={isCurrentSlotSubmitted}>
                       <SelectTrigger className="bg-background">
                           <SelectValue placeholder="Select Subject" />
                       </SelectTrigger>
