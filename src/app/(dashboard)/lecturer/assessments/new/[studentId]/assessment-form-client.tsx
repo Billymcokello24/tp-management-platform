@@ -85,7 +85,7 @@ export function AssessmentFormClient({ student, lecturerId, existingAssessments 
   }, [submitted, anyDraft, activeDraft, s1, s2]);
 
   // Determine if the current slot is already submitted
-  const isCurrentSlotSubmitted = submitted.find(a => a.assessmentNumber === parseInt(currentAssnNum) && a.subject === currentSubject);
+  const isCurrentSlotSubmitted = !!submitted.find(a => a.assessmentNumber === parseInt(currentAssnNum) && a.subject === currentSubject);
 
   const completedCount = submitted.length;
   const allDone = completedCount >= 4;
