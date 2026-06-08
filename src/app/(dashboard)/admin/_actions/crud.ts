@@ -197,6 +197,7 @@ export async function bulkCreateStudents(
   }
 
   revalidatePath("/admin/students");
+  revalidatePath("/admin/stations");
   revalidatePath("/admin/dashboard");
   return { created, skipped };
 }
@@ -445,7 +446,7 @@ export async function createSchool(data: {
 }) {
   await prisma.school.create({ data });
 
-  revalidatePath("/admin/schools");
+  revalidatePath("/admin/stations");
   revalidatePath("/admin/dashboard");
 }
 
@@ -473,20 +474,20 @@ export async function updateSchool(
     data,
   });
 
-  revalidatePath("/admin/schools");
+  revalidatePath("/admin/stations");
   revalidatePath("/admin/dashboard");
 }
 
 export async function deleteSchool(schoolId: string) {
   await prisma.school.delete({ where: { id: schoolId } });
 
-  revalidatePath("/admin/schools");
+  revalidatePath("/admin/stations");
   revalidatePath("/admin/dashboard");
 }
 
 export async function bulkDeleteSchools(schoolIds: string[]) {
   await prisma.school.deleteMany({ where: { id: { in: schoolIds } } });
-  revalidatePath("/admin/schools");
+  revalidatePath("/admin/stations");
   revalidatePath("/admin/dashboard");
 }
 
@@ -542,7 +543,7 @@ export async function bulkCreateSchools(
     }
   }
 
-  revalidatePath("/admin/schools");
+  revalidatePath("/admin/stations");
   revalidatePath("/admin/dashboard");
   return { created, skipped };
 }

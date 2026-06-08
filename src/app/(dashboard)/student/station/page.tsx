@@ -1,7 +1,7 @@
 import { getStudentSchoolData } from "../_actions/student";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapPin, Phone, Mail, Building, Clock } from "lucide-react";
-import { SchoolSelectorClient } from "./school-selector-client";
+import { SchoolSelectorClient as StationSelectorClient } from "./station-selector-client";
 import { prisma } from "@/lib/prisma";
 
 export default async function StudentSchoolPage() {
@@ -19,7 +19,7 @@ export default async function StudentSchoolPage() {
           <span className="text-xs font-bold uppercase tracking-widest text-primary">Placement</span>
         </div>
         <h1 className="text-4xl font-extrabold tracking-tight text-foreground">
-          My School Placement
+          My Station Placement
         </h1>
         <p className="text-sm text-muted-foreground mt-2 font-medium">
           Information about your teaching practice institution.
@@ -34,10 +34,10 @@ export default async function StudentSchoolPage() {
         <PageHeader />
         <Card className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800/50 mb-6">
           <CardContent className="pt-6">
-            <p className="text-amber-800 dark:text-amber-300 text-center font-medium">You have not been placed in a school yet. Please select your school below.</p>
+            <p className="text-amber-800 dark:text-amber-300 text-center font-medium">You have not been placed in a station yet. Please select your station below.</p>
           </CardContent>
         </Card>
-        <SchoolSelectorClient currentSchool={school} availableSchools={availableSchools} />
+        <StationSelectorClient currentSchool={school} availableSchools={availableSchools} />
       </div>
     );
   }
@@ -46,7 +46,7 @@ export default async function StudentSchoolPage() {
     <div className="space-y-6 max-w-4xl pb-20">
       <PageHeader />
 
-      <SchoolSelectorClient currentSchool={school} availableSchools={availableSchools} />
+      <StationSelectorClient currentSchool={school} availableSchools={availableSchools} />
 
       {school && (
         <div className="grid gap-6 md:grid-cols-2 mt-8">
@@ -105,7 +105,7 @@ export default async function StudentSchoolPage() {
             <CardContent>
               <div className="bg-muted/30 border border-border/50 rounded-2xl p-8 text-center">
                 <p className="text-muted-foreground mb-4">Your timetable has not been uploaded yet.</p>
-                <p className="text-sm">Please arrange your teaching subjects with your cooperating teacher once you report to the school.</p>
+                <p className="text-sm">Please arrange your teaching subjects with your cooperating teacher once you report to the station.</p>
               </div>
             </CardContent>
           </Card>

@@ -137,9 +137,9 @@ export async function updateStudentSchool(data: {
     data: { schoolId: school.id },
   });
 
-  revalidatePath("/student/school");
-  revalidatePath("/student/school");
-  revalidatePath("/admin/schools"); // So admins see the newly added school
+  revalidatePath("/student/station");
+  revalidatePath("/student/station");
+  revalidatePath("/admin/stations"); // So admins see the newly added school
   
   return { success: true, school };
 }
@@ -167,6 +167,6 @@ export async function assignExistingSchool(schoolId: string) {
     data: { schoolId: school.id },
   });
 
-  revalidatePath("/student/school");
+  revalidatePath("/student/station");
   return { success: true, school };
 }

@@ -318,7 +318,7 @@ export function SchoolsClient({ schools, zones, globalMetrics }: { schools: Scho
       header: "Actions",
       cell: ({ row }) => (
         <div className="flex items-center gap-1">
-          <Link href={`/admin/schools/${row.original.id}`}>
+          <Link href={`/admin/stations/${row.original.id}`}>
             <Button variant="ghost" size="sm" className="text-primary hover:text-primary/90">
               <Eye className="h-4 w-4" />
             </Button>

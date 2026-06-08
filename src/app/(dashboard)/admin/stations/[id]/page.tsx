@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getSchoolProfile } from "../../_actions/crud";
-import { SchoolProfileClient } from "./school-profile-client";
+import { SchoolProfileClient as StationProfileClient } from "./station-profile-client";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -58,5 +58,5 @@ export default async function SchoolProfilePage({ params }: PageProps) {
     inProgress,
   };
 
-  return <SchoolProfileClient school={serializedSchool} students={assignedStudents} />;
+  return <StationProfileClient school={serializedSchool} students={assignedStudents} />;
 }

@@ -112,10 +112,10 @@ export function SchoolProfileClient({
   ];
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 pb-12">
+    <div className="w-[80%] max-w-none mx-auto space-y-8 pb-12">
       {/* Header */}
       <div className="flex items-center justify-between pt-4">
-        <Link href="/admin/schools">
+        <Link href="/admin/stations">
           <Button variant="ghost" className="gap-2 -ml-4">
             <ArrowLeft className="h-4 w-4" />
             Back to Schools

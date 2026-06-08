@@ -1,5 +1,5 @@
 import { getSchools, getZones } from "../_actions/crud";
-import { SchoolsClient } from "./schools-client";
+import { SchoolsClient as StationsClient } from "./stations-client";
 
 export default async function SchoolsPage() {
   const schools = await getSchools();
@@ -66,5 +66,5 @@ export default async function SchoolsPage() {
     averageSchoolScore: totalAssessmentsCount > 0 ? Math.round(totalScoreSum / totalAssessmentsCount) : 0,
   };
 
-  return <SchoolsClient schools={serialized} zones={serializedZones} globalMetrics={globalMetrics} />;
+  return <StationsClient schools={serialized} zones={serializedZones} globalMetrics={globalMetrics} />;
 }
