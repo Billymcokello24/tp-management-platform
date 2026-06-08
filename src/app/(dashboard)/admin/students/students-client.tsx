@@ -235,7 +235,7 @@ export function StudentsClient({ students, schools, lecturers }: { students: Stu
           if (h === "subjects") row.subjects = values[i];
           if (h === "phone") row.phone = values[i];
           if (h === "password") row.password = values[i];
-          if (h === "school") row.school = values[i];
+          if (h === "school" || h === "station") row.school = values[i];
         });
         return row;
       }).filter((r) => r.name && r.admissionNumber);
@@ -293,7 +293,7 @@ export function StudentsClient({ students, schools, lecturers }: { students: Stu
     { accessorKey: "course", header: "Course" },
     {
       accessorKey: "subjects",
-      header: "Subjects",
+      header: "Specialization",
       cell: ({ row }) => (
         <div className="flex flex-wrap gap-1">
           {row.original.subjects.map((s) => (
@@ -302,7 +302,7 @@ export function StudentsClient({ students, schools, lecturers }: { students: Stu
         </div>
       ),
     },
-    { accessorKey: "schoolName", header: "School" },
+    { accessorKey: "schoolName", header: "Station" },
     { accessorKey: "lecturerName", header: "Lecturer" },
     {
       accessorKey: "tpStatus",
@@ -359,15 +359,15 @@ export function StudentsClient({ students, schools, lecturers }: { students: Stu
         </div>
       </div>
       <div className="space-y-2">
-        <Label>Subjects (comma-separated)</Label>
+        <Label>Specialization (comma-separated)</Label>
         <Input value={form.subjects} onChange={(e) => setForm({ ...form, subjects: e.target.value })} placeholder="Mathematics, Geography" />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label>School</Label>
+          <Label>Station</Label>
           <Select value={form.schoolId} onValueChange={(v) => setForm({ ...form, schoolId: v || "" })}>
             <SelectTrigger>
-              <SelectValue placeholder="Select a school" />
+              <SelectValue placeholder="Select a station" />
             </SelectTrigger>
             <SelectContent>
               {schools.map((s) => (
@@ -455,7 +455,7 @@ export function StudentsClient({ students, schools, lecturers }: { students: Stu
                 <DialogHeader>
                   <DialogTitle>Import Students from CSV</DialogTitle>
                   <DialogDescription className="space-y-3">
-                    <p>Upload a CSV file with columns: <code className="text-xs bg-muted px-1 py-0.5 rounded">name, admissionNumber, course, subjects, phone, password, school</code></p>
+                    <p>Upload a CSV file with columns: <code className="text-xs bg-muted px-1 py-0.5 rounded">name, admissionNumber, course, subjects, phone, password, station</code></p>
                     <a href="/student_template.csv" download className="text-primary text-sm font-medium hover:underline inline-flex items-center gap-1 mt-2">
                       <Download className="h-3 w-3" /> Download CSV Template
                     </a>

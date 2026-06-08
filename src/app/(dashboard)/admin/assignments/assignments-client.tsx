@@ -172,7 +172,7 @@ export function AssignmentsClient({
     { accessorKey: "course", header: "Course" },
     {
       accessorKey: "schoolName",
-      header: "School",
+      header: "Station",
       cell: ({ row }) => (
         <div>
           <p className="text-sm">{row.original.schoolName}</p>

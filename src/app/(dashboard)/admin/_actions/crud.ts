@@ -155,7 +155,21 @@ export async function bulkCreateStudents(
     try {
       let schoolId = null;
       if (row.school) {
-        schoolId = schoolMap.get(row.school.toLowerCase()) || null;
+        const schoolNameLower = row.school.toLowerCase();
+        if (schoolMap.has(schoolNameLower)) {
+          schoolId = schoolMap.get(schoolNameLower) || null;
+        } else {
+          // Auto-create school as "Pending Location" (Option B)
+          const newSchool = await prisma.school.create({
+            data: {
+              name: row.school,
+              county: "Pending",
+              subCounty: "Pending",
+            },
+          });
+          schoolId = newSchool.id;
+          schoolMap.set(schoolNameLower, newSchool.id); // Add to map for subsequent rows
+        }
       }
 
       const currentPasswordHash = row.password ? await bcryptjs.hash(row.password, 10) : defaultPasswordHash;

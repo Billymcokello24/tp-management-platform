@@ -59,7 +59,7 @@ export function AppSidebar() {
             { title: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
             { title: "Students", href: "/admin/students", icon: Users },
             { title: "Lecturers", href: "/admin/lecturers", icon: BookOpen },
-            { title: "Schools", href: "/admin/schools", icon: School },
+            { title: "Stations", href: "/admin/schools", icon: School },
             { title: "Zones", href: "/admin/zones", icon: MapPin },
             { title: "Assignments", href: "/admin/assignments", icon: Shuffle },
             { title: "Assessments", href: "/admin/assessments", icon: ClipboardCheck },
@@ -95,7 +95,7 @@ export function AppSidebar() {
           main: [
             { title: "Dashboard", href: "/student/dashboard", icon: LayoutDashboard },
             { title: "Lesson Plans", href: "/student/lesson-plans", icon: FileText },
-            { title: "My School", href: "/student/school", icon: MapPin },
+            { title: "My Station", href: "/student/school", icon: MapPin },
             { title: "Assessments", href: "/student/assessments", icon: ClipboardCheck },
           ],
           secondary: [

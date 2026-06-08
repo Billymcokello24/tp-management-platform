@@ -71,7 +71,7 @@ export function SchoolSelectorClient({
       const filtered = data.features ? data.features.filter((f: any) => f.properties.countrycode === "KE") : [];
       
       if (filtered.length === 0) {
-        toast.info("No schools found. Try a different name.");
+        toast.info("No stations found. Try a different name.");
       } else {
         setSearchResults(filtered);
       }
@@ -117,10 +117,10 @@ export function SchoolSelectorClient({
         longitude: selectedPlace.lng,
         county: selectedPlace.county,
       });
-      toast.success("School updated successfully!");
+      toast.success("Station updated successfully!");
       setSelectedPlace(null);
     } catch (e: any) {
-      toast.error(e.message || "Failed to update school");
+      toast.error(e.message || "Failed to update station");
     } finally {
       setLoadingMap(false);
     }
@@ -132,9 +132,9 @@ export function SchoolSelectorClient({
     setLoadingExisting(true);
     try {
       await assignExistingSchool(selectedExistingId);
-      toast.success("School assigned successfully!");
+      toast.success("Station assigned successfully!");
     } catch (e: any) {
-      toast.error(e.message || "Failed to assign school");
+      toast.error(e.message || "Failed to assign station");
     } finally {
       setLoadingExisting(false);
     }
@@ -145,17 +145,17 @@ export function SchoolSelectorClient({
       <CardHeader className="bg-muted/30 pb-4 border-b">
         <CardTitle className="text-lg flex items-center gap-2">
           <Building className="h-5 w-5 text-primary" /> 
-          {currentSchool ? "Update School Placement" : "Select Your School"}
+          {currentSchool ? "Update Station Placement" : "Select Your Station"}
         </CardTitle>
         <CardDescription>
-          Choose from existing schools in the system, or search the map to add a new one.
+          Choose from existing stations in the system, or search the map to add a new one.
         </CardDescription>
       </CardHeader>
       <CardContent className="p-0">
         <Tabs defaultValue="existing" className="w-full">
           <div className="px-4 pt-4 bg-background">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="existing" className="flex items-center gap-2"><List className="h-4 w-4" /> Existing Schools</TabsTrigger>
+              <TabsTrigger value="existing" className="flex items-center gap-2"><List className="h-4 w-4" /> Existing Stations</TabsTrigger>
               <TabsTrigger value="map" className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Search Map</TabsTrigger>
             </TabsList>
           </div>
@@ -164,11 +164,11 @@ export function SchoolSelectorClient({
             <div className="max-w-md mx-auto space-y-6 mt-8">
               <div className="space-y-2">
                 <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                  Select a School from Database
+                  Select a Station from Database
                 </label>
                 <Select value={selectedExistingId} onValueChange={(v) => setSelectedExistingId(v || "")}>
                   <SelectTrigger className="w-full h-12">
-                    <SelectValue placeholder="Search or select a school..." />
+                    <SelectValue placeholder="Search or select a station..." />
                   </SelectTrigger>
                   <SelectContent className="max-h-[300px]">
                     {availableSchools.map((s) => (
@@ -179,7 +179,7 @@ export function SchoolSelectorClient({
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Can't find your school? Use the "Search Map" tab to add it manually.
+                  Can't find your station? Use the "Search Map" tab to add it manually.
                 </p>
               </div>
 

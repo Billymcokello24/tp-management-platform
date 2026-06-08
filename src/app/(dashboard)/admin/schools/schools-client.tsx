@@ -106,11 +106,11 @@ export function SchoolsClient({ schools, zones, globalMetrics }: { schools: Scho
         subjects: form.subjects ? form.subjects.split(",").map(s => s.trim()).filter(Boolean) : [],
         zoneId: form.zoneId || undefined,
       });
-      toast.success("School added successfully!");
+      toast.success("Station added successfully!");
       setAddOpen(false);
       resetForm();
     } catch (e: any) {
-      toast.error(e.message || "Failed to add school.");
+      toast.error(e.message || "Failed to add station.");
     } finally {
       setLoading(false);
     }
@@ -136,12 +136,12 @@ export function SchoolsClient({ schools, zones, globalMetrics }: { schools: Scho
         subjects: form.subjects ? form.subjects.split(",").map(s => s.trim()).filter(Boolean) : [],
         zoneId: form.zoneId || undefined,
       });
-      toast.success("School updated!");
+      toast.success("Station updated!");
       setEditOpen(false);
       setEditingSchool(null);
       resetForm();
     } catch (e: any) {
-      toast.error(e.message || "Failed to update school.");
+      toast.error(e.message || "Failed to update station.");
     } finally {
       setLoading(false);
     }
@@ -149,32 +149,32 @@ export function SchoolsClient({ schools, zones, globalMetrics }: { schools: Scho
 
   const handleDelete = async (school: SchoolRow) => {
     if (school.studentsAssigned > 0) {
-      toast.error("Cannot delete a school with assigned students. Reassign them first.");
+      toast.error("Cannot delete a station with assigned students. Reassign them first.");
       return;
     }
     const ok = await confirm(`Delete ${school.name}?`, `Are you sure you want to delete ${school.name}?`);
     if (!ok) return;
     try {
       await deleteSchool(school.id);
-      toast.success("School deleted.");
+      toast.success("Station deleted.");
     } catch (e: any) {
-      toast.error(e.message || "Failed to delete school.");
+      toast.error(e.message || "Failed to delete station.");
     }
   };
 
   const handleBulkDelete = async (selected: SchoolRow[]) => {
     if (selected.some((s) => s.studentsAssigned > 0)) {
-      toast.error("Some selected schools have assigned students. Unassign them first.");
+      toast.error("Some selected stations have assigned students. Unassign them first.");
       return;
     }
-    const ok = await confirm("Bulk Delete", `Are you sure you want to delete ${selected.length} schools?`);
+    const ok = await confirm("Bulk Delete", `Are you sure you want to delete ${selected.length} stations?`);
     if (!ok) return;
     setLoading(true);
     try {
       await bulkDeleteSchools(selected.map((s) => s.id));
-      toast.success(`${selected.length} schools deleted.`);
+      toast.success(`${selected.length} stations deleted.`);
     } catch (e: any) {
-      toast.error(e.message || "Failed to delete schools.");
+      toast.error(e.message || "Failed to delete stations.");
     } finally {
       setLoading(false);
     }
@@ -222,7 +222,7 @@ export function SchoolsClient({ schools, zones, globalMetrics }: { schools: Scho
       }
 
       const result = await bulkCreateSchools(rows);
-      toast.success(`Imported ${result.created} schools. Skipped ${result.skipped} duplicates.`);
+      toast.success(`Imported ${result.created} stations. Skipped ${result.skipped} duplicates.`);
       setCsvOpen(false);
     } catch (e: any) {
       toast.error(e.message || "Failed to import CSV.");
@@ -274,7 +274,7 @@ export function SchoolsClient({ schools, zones, globalMetrics }: { schools: Scho
     },
     {
       accessorKey: "name",
-      header: "School Name",
+      header: "Station Name",
       cell: ({ row }) => (
         <div>
           <span className="font-medium">{row.original.name}</span>
@@ -337,7 +337,7 @@ export function SchoolsClient({ schools, zones, globalMetrics }: { schools: Scho
   const formFields = (
     <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto px-2">
       <div className="space-y-2">
-        <Label>School Name *</Label>
+        <Label>Station Name *</Label>
         <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nairobi High School" />
       </div>
       
@@ -423,10 +423,10 @@ export function SchoolsClient({ schools, zones, globalMetrics }: { schools: Scho
             <span className="text-xs font-bold uppercase tracking-widest text-primary">Placement Registry</span>
           </div>
           <h1 className="text-4xl font-extrabold tracking-tight text-foreground">
-            School Management
+            Station Management
           </h1>
           <p className="text-sm text-muted-foreground mt-2 font-medium">
-            Manage all TP placement schools, zones, and GPS coordinates.
+            Manage all TP placement stations, zones, and GPS coordinates.
           </p>
         </div>
       </div>
@@ -467,7 +467,7 @@ export function SchoolsClient({ schools, zones, globalMetrics }: { schools: Scho
         columns={columns}
         data={schools}
         searchKey="name"
-        searchPlaceholder="Search schools by name..."
+        searchPlaceholder="Search stations by name..."
         onDeleteSelected={handleBulkDelete}
         isDeletingSelected={loading}
         toolbar={
@@ -478,7 +478,7 @@ export function SchoolsClient({ schools, zones, globalMetrics }: { schools: Scho
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Import Schools from CSV</DialogTitle>
+                  <DialogTitle>Import Stations from CSV</DialogTitle>
                   <DialogDescription className="space-y-3">
                     <p>Upload a CSV with columns: <code className="text-xs bg-muted px-1 py-0.5 rounded">name, county, subCounty, zone, subjects, latitude, longitude, principal, phone, email</code></p>
                     <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded">Note: Subjects should be separated by semicolons (;) in the CSV.</p>
@@ -499,17 +499,17 @@ export function SchoolsClient({ schools, zones, globalMetrics }: { schools: Scho
 
             <Dialog open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (!o) resetForm(); }}>
               <DialogTrigger render={<Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-sm" />}>
-                <Plus className="h-4 w-4 mr-2" /> Add School
+                <Plus className="h-4 w-4 mr-2" /> Add Station
               </DialogTrigger>
               <DialogContent className="max-w-lg">
                 <DialogHeader>
-                  <DialogTitle>Add New School</DialogTitle>
-                  <DialogDescription>Register a new TP placement school.</DialogDescription>
+                  <DialogTitle>Add New Station</DialogTitle>
+                  <DialogDescription>Register a new TP placement station.</DialogDescription>
                 </DialogHeader>
                 {formFields}
                 <DialogFooter>
                   <Button onClick={handleAdd} disabled={loading}>
-                    {loading ? "Adding..." : "Add School"}
+                    {loading ? "Adding..." : "Add Station"}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -521,8 +521,8 @@ export function SchoolsClient({ schools, zones, globalMetrics }: { schools: Scho
       <Dialog open={editOpen} onOpenChange={(o) => { setEditOpen(o); if (!o) { setEditingSchool(null); resetForm(); } }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Edit School</DialogTitle>
-            <DialogDescription>Update school details, zone, and GPS coordinates.</DialogDescription>
+            <DialogTitle>Edit Station</DialogTitle>
+            <DialogDescription>Update station details, zone, and GPS coordinates.</DialogDescription>
           </DialogHeader>
           {formFields}
           <DialogFooter>
