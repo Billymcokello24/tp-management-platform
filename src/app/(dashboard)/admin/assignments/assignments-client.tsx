@@ -5,10 +5,41 @@ import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/admin/data-table";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shuffle, RotateCcw, AlertTriangle, Users, MapPin, CheckCircle2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Shuffle, RotateCcw, AlertTriangle, Users, MapPin, CheckCircle2, Plus, Check, ChevronsUpDown } from "lucide-react";
 import { toast } from "sonner";
-import { generateRandomAssignments, resetAssignments } from "../_actions/assignments";
+import { generateRandomAssignments, resetAssignments, manualAssignStudents } from "../_actions/assignments";
 import { useConfirm } from "@/hooks/use-confirm";
+import { cn } from "@/lib/utils";
 
 interface AssignmentRow {
   studentId: string;
@@ -23,15 +54,51 @@ interface AssignmentRow {
   assignmentLocked: boolean;
 }
 
+interface LecturerOption {
+  id: string;
+  name: string;
+  zone: string;
+}
+
 export function AssignmentsClient({
   assignments,
   stats,
+  lecturers,
 }: {
   assignments: AssignmentRow[];
   stats: { total: number; assigned: number; unassigned: number };
+  lecturers: LecturerOption[];
 }) {
   const [ConfirmModal, confirm] = useConfirm();
   const [loading, setLoading] = useState(false);
+  const [assignmentFilter, setAssignmentFilter] = useState<"all" | "assigned" | "unassigned">("all");
+  
+  // Manual Assignment State
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [assigningStudentIds, setAssigningStudentIds] = useState<string[]>([]);
+  const [selectedLecturerId, setSelectedLecturerId] = useState("");
+
+  const handleManualAssign = async () => {
+    if (!selectedLecturerId || assigningStudentIds.length === 0) {
+      toast.error("Please select a lecturer.");
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const result = await manualAssignStudents(assigningStudentIds, selectedLecturerId);
+      if (result.success) {
+        toast.success(result.message);
+        setAssignModalOpen(false);
+        setAssigningStudentIds([]);
+        setSelectedLecturerId("");
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Failed to assign students.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleGenerate = async () => {
     if (stats.unassigned === 0) {
@@ -74,6 +141,25 @@ export function AssignmentsClient({
 
   const columns: ColumnDef<AssignmentRow>[] = [
     {
+      id: "select",
+      header: ({ table }) => (
+        <Checkbox
+          checked={table.getIsAllPageRowsSelected()}
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          aria-label="Select all"
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label="Select row"
+        />
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
+    {
       accessorKey: "studentName",
       header: "Student",
       cell: ({ row }) => (
@@ -108,7 +194,26 @@ export function AssignmentsClient({
         </div>
       ),
     },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => (
+        <Button variant="ghost" size="sm" onClick={() => {
+          setAssigningStudentIds([row.original.studentId]);
+          setSelectedLecturerId("");
+          setAssignModalOpen(true);
+        }} className="text-blue-500 hover:text-blue-600">
+          <Plus className="h-4 w-4 mr-1" /> Re-assign
+        </Button>
+      ),
+    },
   ];
+
+  const filteredAssignments = assignments.filter(a => {
+    if (assignmentFilter === "assigned") return a.lecturerName !== "Unknown";
+    if (assignmentFilter === "unassigned") return a.lecturerName === "Unknown";
+    return true;
+  });
 
   return (
     <div className="space-y-6">
@@ -191,15 +296,113 @@ export function AssignmentsClient({
         </CardContent>
       </Card>
 
-      <div className="pt-4">
-        <h2 className="text-xl font-semibold mb-4">Current Assignments</h2>
+      <div className="pt-4 space-y-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h2 className="text-xl font-semibold">Current Assignments</h2>
+          <div className="flex items-center gap-3">
+            <div className="w-[180px]">
+              <Select value={assignmentFilter} onValueChange={(v: any) => setAssignmentFilter(v)}>
+                <SelectTrigger className="h-10 border-primary/20 bg-background/50 backdrop-blur-sm shadow-sm rounded-xl">
+                  <SelectValue placeholder="Filter Assignment" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Students</SelectItem>
+                  <SelectItem value="assigned">Assigned</SelectItem>
+                  <SelectItem value="unassigned">Unassigned (Unknown)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
         <DataTable
           columns={columns}
-          data={assignments}
+          data={filteredAssignments}
           searchKey="studentName"
           searchPlaceholder="Search assignments by student..."
+          renderBulkActions={(selectedRows, clearSelection) => (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setAssigningStudentIds(selectedRows.map((r: any) => r.studentId));
+                setSelectedLecturerId("");
+                setAssignModalOpen(true);
+                clearSelection();
+              }}
+              className="border-blue-200 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Assign Lecturer ({selectedRows.length})
+            </Button>
+          )}
         />
       </div>
+
+      <Dialog open={assignModalOpen} onOpenChange={setAssignModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Assign Lecturer</DialogTitle>
+            <DialogDescription>Select a lecturer to assign to the {assigningStudentIds.length} selected student(s).</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2 flex flex-col">
+              <Label>Select Lecturer</Label>
+              <Popover>
+                <PopoverTrigger
+                  render={
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className={cn(
+                        "w-full justify-between",
+                        !selectedLecturerId && "text-muted-foreground"
+                      )}
+                    />
+                  }
+                >
+                  {selectedLecturerId
+                    ? lecturers.find((l) => l.id === selectedLecturerId)?.name
+                    : "Search lecturer..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </PopoverTrigger>
+                <PopoverContent className="w-[300px] sm:w-[375px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search lecturer..." />
+                    <CommandList>
+                      <CommandEmpty>No lecturer found.</CommandEmpty>
+                      <CommandGroup>
+                        {lecturers.map((l) => (
+                          <CommandItem
+                            key={l.id}
+                            value={l.name}
+                            onSelect={() => {
+                              setSelectedLecturerId(l.id);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedLecturerId === l.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {l.name} <span className="ml-1 text-muted-foreground text-xs">({l.zone})</span>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAssignModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleManualAssign} disabled={loading || !selectedLecturerId}>
+              {loading ? "Assigning..." : "Confirm Assignment"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <ConfirmModal />
     </div>
   );

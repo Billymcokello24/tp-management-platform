@@ -1,10 +1,12 @@
 import { getAssignments, getAssignmentStats } from "../_actions/assignments";
+import { getLecturers } from "../_actions/crud";
 import { AssignmentsClient } from "./assignments-client";
 
 export default async function AssignmentsPage() {
-  const [assignments, stats] = await Promise.all([
+  const [assignments, stats, lecturers] = await Promise.all([
     getAssignments(),
     getAssignmentStats(),
+    getLecturers(),
   ]);
 
   const serialized = assignments.map((s) => ({
@@ -20,5 +22,11 @@ export default async function AssignmentsPage() {
     assignmentLocked: s.assignment?.isLocked || false,
   }));
 
-  return <AssignmentsClient assignments={serialized} stats={stats} />;
+  const lecturerOptions = lecturers.map((l) => ({
+    id: l.id,
+    name: l.user.name,
+    zone: l.zoneRef?.name || "Unzoned",
+  }));
+
+  return <AssignmentsClient assignments={serialized} stats={stats} lecturers={lecturerOptions} />;
 }

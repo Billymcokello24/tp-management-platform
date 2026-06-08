@@ -236,6 +236,7 @@ export async function generateRandomAssignments() {
   revalidatePath("/admin/assignments");
   revalidatePath("/admin/dashboard");
   revalidatePath("/admin/students");
+  revalidatePath("/admin/lecturers");
 
   return { 
     success: true, 
@@ -255,7 +256,10 @@ export async function resetAssignments() {
     where: { isLocked: false },
   });
 
+  revalidatePath("/admin/assignments");
+  revalidatePath("/admin/dashboard");
   revalidatePath("/admin/students");
+  revalidatePath("/admin/lecturers");
 
   return { success: true, message: "All unlocked assignments have been reset." };
 }
@@ -281,6 +285,7 @@ export async function manualAssignStudents(studentIds: string[], lecturerId: str
   revalidatePath("/admin/assignments");
   revalidatePath("/admin/dashboard");
   revalidatePath("/admin/students");
+  revalidatePath("/admin/lecturers");
 
   return { success: true, message: `Successfully assigned ${studentIds.length} student(s).` };
 }
