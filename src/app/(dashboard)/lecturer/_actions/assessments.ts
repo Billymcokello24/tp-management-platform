@@ -76,6 +76,8 @@ export async function submitAssessment(data: any) {
     studentId: data.studentId,
     lecturerId: data.lecturerId,
     status: status,
+    assessmentNumber: data.assessmentNumber || 1,
+    subject: data.subject || null,
     totalMarks,
     grade,
     performanceBand: band,

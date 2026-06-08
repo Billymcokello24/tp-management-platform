@@ -12,8 +12,19 @@ export default async function LecturerStudentsPage() {
     const latestGrade = completedCount > 0 ? reviewed[reviewed.length - 1].grade : null;
 
     let progressLabel = "Not Assessed";
-    if (completedCount >= 3) progressLabel = "Fully Assessed";
+    if (completedCount >= 4) progressLabel = "Fully Assessed";
     else if (completedCount > 0) progressLabel = "Partially Assessed";
+
+    // Determine exact slots completed
+    const s1 = s.subjects?.[0] || "Subject 1";
+    const s2 = s.subjects?.[1] || "Subject 2";
+    
+    const completedSlots = {
+      A1S1: !!reviewed.find((a: any) => a.assessmentNumber === 1 && a.subject === s1),
+      A1S2: !!reviewed.find((a: any) => a.assessmentNumber === 1 && a.subject === s2),
+      A2S1: !!reviewed.find((a: any) => a.assessmentNumber === 2 && a.subject === s1),
+      A2S2: !!reviewed.find((a: any) => a.assessmentNumber === 2 && a.subject === s2),
+    };
 
     return {
       id: s.id,
@@ -28,6 +39,7 @@ export default async function LecturerStudentsPage() {
       avgScore,
       latestGrade,
       progressLabel,
+      completedSlots,
     };
   });
 

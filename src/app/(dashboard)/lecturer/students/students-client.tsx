@@ -20,6 +20,12 @@ interface AssignedStudent {
   avgScore: number;
   latestGrade: string | null;
   progressLabel: string;
+  completedSlots: {
+    A1S1: boolean;
+    A1S2: boolean;
+    A2S1: boolean;
+    A2S2: boolean;
+  };
 }
 
 export function LecturerStudentsClient({ students }: { students: AssignedStudent[] }) {
@@ -63,22 +69,24 @@ export function LecturerStudentsClient({ students }: { students: AssignedStudent
       header: "Assessment Progress",
       cell: ({ row }) => {
         const s = row.original;
+        const slots = [
+          { label: "A1S1", done: s.completedSlots.A1S1 },
+          { label: "A1S2", done: s.completedSlots.A1S2 },
+          { label: "A2S1", done: s.completedSlots.A2S1 },
+          { label: "A2S2", done: s.completedSlots.A2S2 },
+        ];
         return (
           <div className="space-y-1.5">
-            {/* 3 step dots */}
-            <div className="flex items-center gap-1">
-              {[1, 2, 3].map(num => {
-                const done = num <= s.completedCount;
-                const active = num === s.completedCount + 1 && s.completedCount < 3;
-                return (
-                  <div key={num} className="flex items-center gap-1">
-                    {done ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> :
-                     active ? <Circle className="h-4 w-4 text-primary" /> :
-                     <Lock className="h-3.5 w-3.5 text-muted-foreground/40" />}
-                    {num < 3 && <div className={`w-3 h-0.5 ${done ? "bg-emerald-400" : "bg-border"}`} />}
+            <div className="flex items-center gap-1.5">
+              {slots.map((slot, i) => (
+                <div key={slot.label} className="flex items-center gap-1.5" title={slot.label}>
+                  <div className="flex flex-col items-center">
+                    {slot.done ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <Circle className="h-4 w-4 text-muted-foreground/30" />}
+                    <span className="text-[8px] font-bold text-muted-foreground mt-0.5">{slot.label}</span>
                   </div>
-                );
-              })}
+                  {i < 3 && <div className={`w-2 h-0.5 mt-[-10px] ${slot.done && slots[i+1].done ? "bg-emerald-400" : "bg-border/50"}`} />}
+                </div>
+              ))}
             </div>
             <Badge
               variant={s.progressLabel === "Fully Assessed" ? "default" : s.progressLabel === "Partially Assessed" ? "secondary" : "outline"}
@@ -112,7 +120,7 @@ export function LecturerStudentsClient({ students }: { students: AssignedStudent
       header: "",
       cell: ({ row }) => {
         const s = row.original;
-        const allDone = s.completedCount >= 3;
+        const allDone = s.completedCount >= 4;
         return (
           <Link href={`/lecturer/assessments/new/${s.id}`}>
             <Button
@@ -123,7 +131,7 @@ export function LecturerStudentsClient({ students }: { students: AssignedStudent
               {allDone ? (
                 <><CheckCircle2 className="h-4 w-4 mr-1.5" /> View Results</>
               ) : (
-                <><ArrowRight className="h-4 w-4 mr-1.5" /> Continue A{s.completedCount + 1}</>
+                <><ArrowRight className="h-4 w-4 mr-1.5" /> Assess</>
               )}
             </Button>
           </Link>

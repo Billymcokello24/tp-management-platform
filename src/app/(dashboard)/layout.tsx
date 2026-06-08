@@ -4,6 +4,8 @@ import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { SessionProvider } from "@/components/shared/session-provider";
 import { TMULogo } from "@/components/shared/tmu-logo";
 
+export const dynamic = "force-dynamic";
+
 export default function DashboardLayout({
   children,
 }: {

@@ -18,9 +18,10 @@ interface StudentRow {
   studentId: string;
   studentName: string;
   admissionNumber: string;
-  a1: AssessmentSlot | null;
-  a2: AssessmentSlot | null;
-  a3: AssessmentSlot | null;
+  a1s1: AssessmentSlot | null;
+  a1s2: AssessmentSlot | null;
+  a2s1: AssessmentSlot | null;
+  a2s2: AssessmentSlot | null;
 }
 
 const scoreColor = (score: number | undefined) => {
@@ -54,25 +55,36 @@ export function LecturerAssessmentsClient({ students }: { students: StudentRow[]
       ),
     },
     {
-      id: "a1",
-      header: () => <div className="text-center">A1</div>,
-      cell: ({ row }) => <ScoreCell slot={row.original.a1} />,
+      id: "a1s1",
+      header: () => <div className="text-center text-xs">A1S1</div>,
+      cell: ({ row }) => <ScoreCell slot={row.original.a1s1} />,
     },
     {
-      id: "a2",
-      header: () => <div className="text-center">A2</div>,
-      cell: ({ row }) => <ScoreCell slot={row.original.a2} />,
+      id: "a1s2",
+      header: () => <div className="text-center text-xs">A1S2</div>,
+      cell: ({ row }) => <ScoreCell slot={row.original.a1s2} />,
     },
     {
-      id: "a3",
-      header: () => <div className="text-center">A3</div>,
-      cell: ({ row }) => <ScoreCell slot={row.original.a3} />,
+      id: "a2s1",
+      header: () => <div className="text-center text-xs">A2S1</div>,
+      cell: ({ row }) => <ScoreCell slot={row.original.a2s1} />,
+    },
+    {
+      id: "a2s2",
+      header: () => <div className="text-center text-xs">A2S2</div>,
+      cell: ({ row }) => <ScoreCell slot={row.original.a2s2} />,
     },
     {
       id: "average",
       header: () => <div className="text-center">Avg</div>,
       cell: ({ row }) => {
-        const scores = [row.original.a1?.totalMarks, row.original.a2?.totalMarks, row.original.a3?.totalMarks].filter((v): v is number => v != null);
+        const scores = [
+          row.original.a1s1?.totalMarks, 
+          row.original.a1s2?.totalMarks, 
+          row.original.a2s1?.totalMarks,
+          row.original.a2s2?.totalMarks
+        ].filter((v): v is number => v != null);
+        
         if (scores.length === 0) return <span className="text-muted-foreground text-xs">—</span>;
         const avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
         return (
@@ -87,10 +99,15 @@ export function LecturerAssessmentsClient({ students }: { students: StudentRow[]
       id: "progress",
       header: "Progress",
       cell: ({ row }) => {
-        const completed = [row.original.a1, row.original.a2, row.original.a3].filter(Boolean).length;
+        const completed = [
+          row.original.a1s1, 
+          row.original.a1s2, 
+          row.original.a2s1,
+          row.original.a2s2
+        ].filter(Boolean).length;
         return (
           <div className="flex items-center gap-1.5">
-            {[1, 2, 3].map((i) => (
+            {[1, 2, 3, 4].map((i) => (
               <div
                 key={i}
                 className={`h-2.5 w-2.5 rounded-full ${
@@ -98,7 +115,7 @@ export function LecturerAssessmentsClient({ students }: { students: StudentRow[]
                 }`}
               />
             ))}
-            <span className="text-xs text-muted-foreground ml-1">{completed}/3</span>
+            <span className="text-xs text-muted-foreground ml-1">{completed}/4</span>
           </div>
         );
       },

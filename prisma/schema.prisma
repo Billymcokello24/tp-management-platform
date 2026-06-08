@@ -223,10 +223,12 @@ model Assignment {
 // ── Assessment (TOM MBOYA University Rubric) ───────
 
 model Assessment {
-  id         String           @id @default(cuid())
-  studentId  String
-  lecturerId String
-  status     AssessmentStatus @default(DRAFT)
+  id               String           @id @default(cuid())
+  studentId        String
+  lecturerId       String
+  status           AssessmentStatus @default(DRAFT)
+  assessmentNumber Int              @default(1) // 1 = First Assessment, 2 = Second Assessment
+  subject          String?          // The specific subject being assessed (from student's registered subjects)
 
   // PREPARATION (T/Marks 12)
   // Scheme of work (T/Marks 2)

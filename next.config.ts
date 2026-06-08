@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   turbopack: {
     // Ignore parent lockfiles to prevent OS file watch limit reached
     root: __dirname

@@ -16,6 +16,8 @@ export default async function NewAssessmentPage({ params }: PageProps) {
     const serializedAssessments = assessments.map((a: any) => ({
       id: a.id,
       status: a.status,
+      assessmentNumber: a.assessmentNumber || 1,
+      subject: a.subject || null,
       totalMarks: a.totalMarks,
       grade: a.grade,
       performanceBand: a.performanceBand,
@@ -56,6 +58,7 @@ export default async function NewAssessmentPage({ params }: PageProps) {
       name: student.user.name,
       admissionNumber: student.admissionNumber,
       course: student.course,
+      subjects: student.subjects || [],
       schoolName: student.school?.name || "N/A",
       schoolLatitude: student.school?.latitude ?? null,
       schoolLongitude: student.school?.longitude ?? null,
