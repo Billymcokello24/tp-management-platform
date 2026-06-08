@@ -2,9 +2,14 @@ import { getStudentSchoolData } from "../_actions/student";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapPin, Phone, Mail, Building, Clock } from "lucide-react";
 import { SchoolSelectorClient } from "./school-selector-client";
+import { prisma } from "@/lib/prisma";
 
 export default async function StudentSchoolPage() {
   const school = await getStudentSchoolData();
+  const availableSchools = await prisma.school.findMany({
+    select: { id: true, name: true, county: true },
+    orderBy: { name: "asc" }
+  });
 
   const PageHeader = () => (
     <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 pt-4">
@@ -25,13 +30,14 @@ export default async function StudentSchoolPage() {
 
   if (!school) {
     return (
-      <div className="space-y-6 max-w-4xl">
+      <div className="space-y-6 max-w-4xl pb-20">
         <PageHeader />
-        <Card className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800/50">
+        <Card className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800/50 mb-6">
           <CardContent className="pt-6">
-            <p className="text-amber-800 dark:text-amber-300 text-center py-8">You have not been placed in a school yet. Please check back later or contact the TP Coordinator.</p>
+            <p className="text-amber-800 dark:text-amber-300 text-center font-medium">You have not been placed in a school yet. Please select your school below.</p>
           </CardContent>
         </Card>
+        <SchoolSelectorClient currentSchool={school} availableSchools={availableSchools} />
       </div>
     );
   }
@@ -40,7 +46,7 @@ export default async function StudentSchoolPage() {
     <div className="space-y-6 max-w-4xl pb-20">
       <PageHeader />
 
-      <SchoolSelectorClient currentSchool={school} />
+      <SchoolSelectorClient currentSchool={school} availableSchools={availableSchools} />
 
       {school && (
         <div className="grid gap-6 md:grid-cols-2 mt-8">

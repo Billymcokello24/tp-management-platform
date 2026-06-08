@@ -24,7 +24,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Upload, Pencil, Trash2, Download } from "lucide-react";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Plus, Upload, Pencil, Trash2, Download, Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { createStudent, updateStudent, deleteStudent, bulkCreateStudents, bulkDeleteStudents } from "../_actions/crud";
 import { useConfirm } from "@/hooks/use-confirm";
@@ -51,19 +65,29 @@ interface SchoolOption {
   county: string;
 }
 
+interface LecturerOption {
+  id: string;
+  name: string;
+  zone: string;
+}
+
 const statusColors: Record<string, string> = {
   PENDING: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
   ACTIVE: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
   COMPLETED: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
 };
 
-export function StudentsClient({ students, schools }: { students: Student[]; schools: SchoolOption[] }) {
+export function StudentsClient({ students, schools, lecturers }: { students: Student[]; schools: SchoolOption[]; lecturers: LecturerOption[] }) {
   const [ConfirmModal, confirm] = useConfirm();
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [csvOpen, setCsvOpen] = useState(false);
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [assignmentFilter, setAssignmentFilter] = useState<"all" | "assigned" | "unassigned">("all");
+  const [assigningStudentIds, setAssigningStudentIds] = useState<string[]>([]);
+  const [selectedLecturerId, setSelectedLecturerId] = useState("");
 
   // Form state
   const [form, setForm] = useState({
@@ -165,6 +189,29 @@ export function StudentsClient({ students, schools }: { students: Student[]; sch
       password: "", // Don't pre-fill password on edit
     });
     setEditOpen(true);
+  };
+
+  const handleManualAssign = async () => {
+    if (!selectedLecturerId || assigningStudentIds.length === 0) {
+      toast.error("Please select a lecturer.");
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const { manualAssignStudents } = await import("../_actions/assignments");
+      const result = await manualAssignStudents(assigningStudentIds, selectedLecturerId);
+      if (result.success) {
+        toast.success(result.message);
+        setAssignModalOpen(false);
+        setAssigningStudentIds([]);
+        setSelectedLecturerId("");
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Failed to assign students.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCsvUpload = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -274,6 +321,13 @@ export function StudentsClient({ students, schools }: { students: Student[]; sch
           <Button variant="ghost" size="sm" onClick={() => openEdit(row.original)}>
             <Pencil className="h-4 w-4" />
           </Button>
+          <Button variant="ghost" size="sm" onClick={() => {
+            setAssigningStudentIds([row.original.id]);
+            setSelectedLecturerId(row.original.assignmentId || "");
+            setAssignModalOpen(true);
+          }} className="text-blue-500 hover:text-blue-600">
+            <Plus className="h-4 w-4 mr-1" /> Assign
+          </Button>
           <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600" onClick={() => handleDelete(row.original)}>
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -330,6 +384,12 @@ export function StudentsClient({ students, schools }: { students: Student[]; sch
     </div>
   );
 
+  const filteredStudents = students.filter(s => {
+    if (assignmentFilter === "assigned") return s.assignmentId !== null;
+    if (assignmentFilter === "unassigned") return s.assignmentId === null;
+    return true;
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 pt-4">
@@ -345,15 +405,45 @@ export function StudentsClient({ students, schools }: { students: Student[]; sch
             Manage all Teaching Practice students across the institution.
           </p>
         </div>
+        <div className="flex items-center gap-3">
+          <div className="w-[180px]">
+            <Select value={assignmentFilter} onValueChange={(v: any) => setAssignmentFilter(v)}>
+              <SelectTrigger className="h-10 border-primary/20 bg-background/50 backdrop-blur-sm shadow-sm rounded-xl">
+                <SelectValue placeholder="Filter Assignment" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Students</SelectItem>
+                <SelectItem value="assigned">Assigned</SelectItem>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </div>
 
       <DataTable
         columns={columns}
-        data={students}
+        data={filteredStudents}
         searchKey="name"
         searchPlaceholder="Search students by name..."
         onDeleteSelected={handleBulkDelete}
         isDeletingSelected={loading}
+        renderBulkActions={(selectedRows, clearSelection) => (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setAssigningStudentIds(selectedRows.map((r: any) => r.id));
+              setSelectedLecturerId("");
+              setAssignModalOpen(true);
+              clearSelection();
+            }}
+            className="border-blue-200 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Assign Lecturer ({selectedRows.length})
+          </Button>
+        )}
         toolbar={
           <div className="flex items-center gap-2">
             {/* CSV Import Dialog */}
@@ -417,6 +507,71 @@ export function StudentsClient({ students, schools }: { students: Student[]; sch
           <DialogFooter>
             <Button onClick={handleEdit} disabled={loading}>
               {loading ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={assignModalOpen} onOpenChange={setAssignModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Assign Lecturer</DialogTitle>
+            <DialogDescription>Select a lecturer to assign to the {assigningStudentIds.length} selected student(s).</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2 flex flex-col">
+              <Label>Select Lecturer</Label>
+              <Popover>
+                <PopoverTrigger
+                  render={
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className={cn(
+                        "w-full justify-between",
+                        !selectedLecturerId && "text-muted-foreground"
+                      )}
+                    />
+                  }
+                >
+                  {selectedLecturerId
+                    ? lecturers.find((l) => l.id === selectedLecturerId)?.name
+                    : "Search lecturer..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </PopoverTrigger>
+                <PopoverContent className="w-[300px] sm:w-[375px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search lecturer..." />
+                    <CommandList>
+                      <CommandEmpty>No lecturer found.</CommandEmpty>
+                      <CommandGroup>
+                        {lecturers.map((l) => (
+                          <CommandItem
+                            key={l.id}
+                            value={l.name}
+                            onSelect={() => {
+                              setSelectedLecturerId(l.id);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedLecturerId === l.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {l.name} <span className="ml-1 text-muted-foreground text-xs">({l.zone})</span>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAssignModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleManualAssign} disabled={loading || !selectedLecturerId}>
+              {loading ? "Assigning..." : "Confirm Assignment"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -82,10 +82,10 @@ export function AssessmentDetailClient({ assessments }: { assessments: any[] }) 
         if (ctx) { ctx.drawImage(logoImg, 0, 0); logoDataUrl = canvas.toDataURL("image/png"); }
       }
       const worker = html2pdf().set({
-        margin: [38, 8, 15, 8],
+        margin: [30, 8, 10, 8],
         filename: `TMU_Assessment_${safeName}.pdf`,
         image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, letterRendering: true, windowWidth: 1100 },
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true, windowWidth: 1400 },
         jsPDF: { unit: "mm", format: "a4", orientation: "landscape" as const },
         pagebreak: { mode: ["css", "legacy"] },
       } as any).from(pdfRef.current).toPdf();

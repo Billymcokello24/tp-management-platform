@@ -138,7 +138,35 @@ export async function updateStudentSchool(data: {
   });
 
   revalidatePath("/student/school");
+  revalidatePath("/student/school");
   revalidatePath("/admin/schools"); // So admins see the newly added school
   
+  return { success: true, school };
+}
+
+export async function assignExistingSchool(schoolId: string) {
+  const session = await auth();
+  if (!session?.user?.id || (session.user as any).role !== "STUDENT") {
+    throw new Error("Unauthorized");
+  }
+
+  const student = await prisma.student.findUnique({
+    where: { userId: session.user.id },
+  });
+
+  if (!student) throw new Error("Student not found");
+
+  const school = await prisma.school.findUnique({
+    where: { id: schoolId },
+  });
+
+  if (!school) throw new Error("School not found");
+
+  await prisma.student.update({
+    where: { id: student.id },
+    data: { schoolId: school.id },
+  });
+
+  revalidatePath("/student/school");
   return { success: true, school };
 }

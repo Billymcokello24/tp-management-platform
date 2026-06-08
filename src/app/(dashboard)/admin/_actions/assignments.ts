@@ -255,11 +255,34 @@ export async function resetAssignments() {
     where: { isLocked: false },
   });
 
+  revalidatePath("/admin/students");
+
+  return { success: true, message: "All unlocked assignments have been reset." };
+}
+
+export async function manualAssignStudents(studentIds: string[], lecturerId: string) {
+  // First, find or create the assignment record for this lecturer
+  let assignment = await prisma.assignment.findFirst({
+    where: { lecturerId, isLocked: false },
+  });
+
+  if (!assignment) {
+    assignment = await prisma.assignment.create({
+      data: { lecturerId },
+    });
+  }
+
+  // Update all selected students
+  await prisma.student.updateMany({
+    where: { id: { in: studentIds } },
+    data: { assignmentId: assignment.id },
+  });
+
   revalidatePath("/admin/assignments");
   revalidatePath("/admin/dashboard");
   revalidatePath("/admin/students");
 
-  return { success: true, message: "All unlocked assignments have been reset." };
+  return { success: true, message: `Successfully assigned ${studentIds.length} student(s).` };
 }
 
 export async function getAssignmentStats() {

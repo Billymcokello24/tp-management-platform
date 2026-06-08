@@ -1,10 +1,11 @@
-import { getStudents, getSchools } from "../_actions/crud";
+import { getStudents, getSchools, getLecturers } from "../_actions/crud";
 import { StudentsClient } from "./students-client";
 
 export default async function StudentsPage() {
-  const [students, schools] = await Promise.all([
+  const [students, schools, lecturers] = await Promise.all([
     getStudents(),
     getSchools(),
+    getLecturers(),
   ]);
 
   const serialized = students.map((s) => ({
@@ -29,5 +30,11 @@ export default async function StudentsPage() {
     county: s.county,
   }));
 
-  return <StudentsClient students={serialized} schools={schoolOptions} />;
+  const lecturerOptions = lecturers.map((l) => ({
+    id: l.id,
+    name: l.user.name,
+    zone: l.zoneRef?.name || "Unzoned",
+  }));
+
+  return <StudentsClient students={serialized} schools={schoolOptions} lecturers={lecturerOptions} />;
 }

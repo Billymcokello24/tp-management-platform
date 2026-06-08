@@ -34,6 +34,7 @@ interface DataTableProps<TData, TValue> {
   toolbar?: React.ReactNode;
   onDeleteSelected?: (rows: TData[]) => void;
   isDeletingSelected?: boolean;
+  renderBulkActions?: (selectedRows: TData[], clearSelection: () => void) => React.ReactNode;
 }
 
 export function DataTable<TData, TValue>({
@@ -44,6 +45,7 @@ export function DataTable<TData, TValue>({
   toolbar,
   onDeleteSelected,
   isDeletingSelected,
+  renderBulkActions,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -64,6 +66,7 @@ export function DataTable<TData, TValue>({
   });
 
   const selectedRows = table.getFilteredSelectedRowModel().rows.map(r => r.original);
+  const clearSelection = () => table.toggleAllRowsSelected(false);
 
   return (
     <div className="space-y-4">
@@ -80,14 +83,15 @@ export function DataTable<TData, TValue>({
             />
           </div>
         )}
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+          {selectedRows.length > 0 && renderBulkActions && renderBulkActions(selectedRows, clearSelection)}
           {selectedRows.length > 0 && onDeleteSelected && (
             <Button
               variant="destructive"
               size="sm"
               onClick={() => {
                 onDeleteSelected(selectedRows);
-                table.toggleAllRowsSelected(false);
+                clearSelection();
               }}
               disabled={isDeletingSelected}
             >
