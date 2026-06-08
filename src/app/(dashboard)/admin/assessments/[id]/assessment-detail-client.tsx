@@ -32,7 +32,7 @@ export function AssessmentDetailClient({ student: propStudent, assessments }: { 
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
     };
 
-    await html2pdf().set(opt).from(element).save();
+    await html2pdf().set(opt as any).from(element).save();
 
     // Hide it again after printing
     element.classList.add("hidden");
