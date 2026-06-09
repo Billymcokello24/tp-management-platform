@@ -236,7 +236,7 @@ export function LecturerLessonPlansClient({
                                 </td>
                                 <td className="py-2.5 px-3 text-right">
                                   <Link
-                                    href={`/student/lesson-plans/${lp.id}`}
+                                    href={`/lecturer/lesson-plans/${lp.id}`}
                                   >
                                     <Button
                                       variant="ghost"
