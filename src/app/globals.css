@@ -136,14 +136,14 @@
 
 /* Touch-friendly buttons on mobile */
 @media (max-width: 768px) {
-  button, 
-  [role="button"],
+  button:not([data-sidebar]), 
+  [role="button"]:not([data-sidebar]),
   a.inline-flex.items-center.justify-center {
     min-height: 44px; /* Apple Human Interface Guidelines minimum tap target */
   }
   
-  /* Modal responsiveness */
-  [role="dialog"] > div {
+  /* Modal responsiveness - excluding sidebar drawer */
+  [role="dialog"]:not([data-sidebar="sidebar"]) > div {
     max-height: 90vh !important;
     overflow-y: auto !important;
     width: 95vw !important;
