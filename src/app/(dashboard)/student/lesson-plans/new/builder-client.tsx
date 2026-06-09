@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Save, Send, ArrowLeft, Plus, Trash2 } from "lucide-react";
-import { saveLessonPlan } from "../../_actions/lesson-plans";
+import { saveLessonPlan, updateLessonPlan } from "../../_actions/lesson-plans";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 interface LessonStep {
@@ -21,25 +21,40 @@ interface LessonStep {
   time: string;
 }
 
-export function BuilderClient() {
+export function BuilderClient({ initialData }: { initialData?: any }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   // Form State
   const [basicInfo, setBasicInfo] = useState({
-    subject: "", classForm: "", stream: "", topic: "", subTopic: "", date: "", startTime: "", endTime: "", duration: ""
+    subject: initialData?.subject || "", 
+    classForm: initialData?.classForm || "", 
+    stream: initialData?.stream || "", 
+    topic: initialData?.topic || "", 
+    subTopic: initialData?.subTopic || "", 
+    date: initialData?.date ? new Date(initialData.date).toISOString().split('T')[0] : "", 
+    startTime: initialData?.startTime || "", 
+    endTime: initialData?.endTime || "", 
+    duration: initialData?.duration || ""
   });
   
   const [content, setContent] = useState({
-    objectives: "", introduction: "", conclusion: "", assessment: "", assignment: "", reflection: "", resources: ""
+    objectives: initialData?.objectives || "", 
+    introduction: initialData?.introduction || "", 
+    conclusion: initialData?.conclusion || "", 
+    assessment: initialData?.assessment || "", 
+    assignment: initialData?.assignment || "", 
+    reflection: initialData?.reflection || "", 
+    resources: initialData?.resources || ""
   });
 
-  const [methods, setMethods] = useState<string[]>([]);
+  const [methods, setMethods] = useState<string[]>(initialData?.methods || []);
   const methodOptions = ["Discussion", "Demonstration", "Question & Answer", "Group Work", "Lecture Method", "Problem Solving", "Experiment", "Field Work"];
 
-  const [steps, setSteps] = useState<LessonStep[]>([
-    { id: "1", teacherActivity: "", learnerActivity: "", resources: "", time: "" }
-  ]);
+  const defaultSteps = [{ id: "1", teacherActivity: "", learnerActivity: "", resources: "", time: "" }];
+  const [steps, setSteps] = useState<LessonStep[]>(
+    initialData?.developmentSteps?.length > 0 ? initialData.developmentSteps : defaultSteps
+  );
 
   const toggleMethod = (method: string) => {
     if (methods.includes(method)) setMethods(methods.filter(m => m !== method));
@@ -79,7 +94,10 @@ export function BuilderClient() {
         status,
       };
       
-      const res = await saveLessonPlan(payload);
+      const res = initialData 
+        ? await updateLessonPlan(initialData.id, payload)
+        : await saveLessonPlan(payload);
+
       if (res.success) {
         toast.success(status === "DRAFT" ? "Draft saved successfully!" : "Lesson plan submitted!");
         router.push("/student/lesson-plans");
@@ -100,8 +118,8 @@ export function BuilderClient() {
       </div>
 
       <div>
-        <h1 className="text-4xl font-extrabold tracking-tight text-foreground">Lesson Plan Builder</h1>
-        <p className="text-muted-foreground mt-1 font-medium">Create a professional digital lesson plan.</p>
+        <h1 className="text-4xl font-extrabold tracking-tight text-foreground">{initialData ? "Edit Lesson Plan" : "Lesson Plan Builder"}</h1>
+        <p className="text-muted-foreground mt-1 font-medium">{initialData ? "Update your drafted lesson plan." : "Create a professional digital lesson plan."}</p>
       </div>
 
       <Accordion defaultValue={["basic-info"]} className="w-full space-y-4">
