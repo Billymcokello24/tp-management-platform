@@ -34,6 +34,8 @@ export default async function LecturerAssessmentsPage() {
     a1s2: { id: string; totalMarks: number; grade: string; status: string; createdAt: string } | null;
     a2s1: { id: string; totalMarks: number; grade: string; status: string; createdAt: string } | null;
     a2s2: { id: string; totalMarks: number; grade: string; status: string; createdAt: string } | null;
+    a3s1: { id: string; totalMarks: number; grade: string; status: string; createdAt: string } | null;
+    a3s2: { id: string; totalMarks: number; grade: string; status: string; createdAt: string } | null;
   }>();
 
   for (const a of assessments) {
@@ -46,6 +48,8 @@ export default async function LecturerAssessmentsPage() {
         a1s2: null,
         a2s1: null,
         a2s2: null,
+        a3s1: null,
+        a3s2: null,
       });
     }
 
@@ -65,6 +69,8 @@ export default async function LecturerAssessmentsPage() {
     else if (a.assessmentNumber === 1 && a.subject === s2) entry.a1s2 = aData;
     else if (a.assessmentNumber === 2 && a.subject === s1) entry.a2s1 = aData;
     else if (a.assessmentNumber === 2 && a.subject === s2) entry.a2s2 = aData;
+    else if (a.assessmentNumber === 3 && a.subject === s1) entry.a3s1 = aData;
+    else if (a.assessmentNumber === 3 && a.subject === s2) entry.a3s2 = aData;
   }
 
   const grouped = Array.from(studentMap.values());

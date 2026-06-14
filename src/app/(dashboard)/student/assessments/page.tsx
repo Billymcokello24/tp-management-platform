@@ -31,9 +31,12 @@ export default async function StudentAssessmentsPage() {
     studentId: string;
     studentName: string;
     admissionNumber: string;
-    a1: { id: string; totalMarks: number; grade: string; status: string; lecturerName: string; createdAt: string } | null;
-    a2: { id: string; totalMarks: number; grade: string; status: string; lecturerName: string; createdAt: string } | null;
-    a3: { id: string; totalMarks: number; grade: string; status: string; lecturerName: string; createdAt: string } | null;
+    a1s1: { id: string; totalMarks: number; grade: string; status: string; lecturerName: string; createdAt: string; subject: string } | null;
+    a1s2: { id: string; totalMarks: number; grade: string; status: string; lecturerName: string; createdAt: string; subject: string } | null;
+    a2s1: { id: string; totalMarks: number; grade: string; status: string; lecturerName: string; createdAt: string; subject: string } | null;
+    a2s2: { id: string; totalMarks: number; grade: string; status: string; lecturerName: string; createdAt: string; subject: string } | null;
+    a3s1: { id: string; totalMarks: number; grade: string; status: string; lecturerName: string; createdAt: string; subject: string } | null;
+    a3s2: { id: string; totalMarks: number; grade: string; status: string; lecturerName: string; createdAt: string; subject: string } | null;
   }>();
 
   // Initialize the single student entry
@@ -41,9 +44,12 @@ export default async function StudentAssessmentsPage() {
     studentId: student.id,
     studentName: student.user.name || "Unknown",
     admissionNumber: student.admissionNumber,
-    a1: null,
-    a2: null,
-    a3: null,
+    a1s1: null,
+    a1s2: null,
+    a2s1: null,
+    a2s2: null,
+    a3s1: null,
+    a3s2: null,
   });
 
   const entry = studentMap.get(student.id)!;
@@ -56,11 +62,18 @@ export default async function StudentAssessmentsPage() {
       status: a.status,
       lecturerName: a.lecturer.user.name || "Unknown",
       createdAt: a.createdAt.toISOString(),
+      subject: a.subject || "N/A",
     };
 
-    if (!entry.a1) entry.a1 = aData;
-    else if (!entry.a2) entry.a2 = aData;
-    else if (!entry.a3) entry.a3 = aData;
+    const s1 = student.subjects?.[0] || "Subject 1";
+    const s2 = student.subjects?.[1] || "Subject 2";
+
+    if (a.assessmentNumber === 1 && a.subject === s1) entry.a1s1 = aData;
+    else if (a.assessmentNumber === 1 && a.subject === s2) entry.a1s2 = aData;
+    else if (a.assessmentNumber === 2 && a.subject === s1) entry.a2s1 = aData;
+    else if (a.assessmentNumber === 2 && a.subject === s2) entry.a2s2 = aData;
+    else if (a.assessmentNumber === 3 && a.subject === s1) entry.a3s1 = aData;
+    else if (a.assessmentNumber === 3 && a.subject === s2) entry.a3s2 = aData;
   }
 
   const grouped = Array.from(studentMap.values());

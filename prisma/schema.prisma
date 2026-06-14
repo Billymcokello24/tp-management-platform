@@ -289,6 +289,7 @@ model Assessment {
   // GPS verification
   submissionLatitude  Float?
   submissionLongitude Float?
+  gpsAccuracy         Float?   // GPS accuracy in meters at time of assessment
   isGeoVerified       Boolean @default(false)
   geoVerificationNote String?
 
@@ -410,4 +411,25 @@ model SupervisionVisit {
   @@index([lecturerId])
   @@index([studentId])
   @@index([schoolId])
+}
+
+// ── Audit Trail ────────────────────────────────────
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String   // e.g. "ASSESSMENT_SUBMITTED", "USER_LOGIN", "STUDENT_ASSIGNED", "LESSON_PLAN_SUBMITTED"
+  entity    String   // e.g. "Assessment", "User", "Student", "LessonPlan"
+  entityId  String?  // The ID of the affected entity
+  message   String   // Human-readable description
+  userId    String?  // Who performed the action
+  userRole  String?  // Role of the actor at the time
+  metadata  Json?    // Extra context (IP, user agent, old/new values, etc.)
+  ipAddress String?  // Client IP (set by server)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([entity])
+  @@index([createdAt])
 }

@@ -20,6 +20,7 @@ import {
   MapPin,
   FolderOpen,
   Award,
+  Shield,
 } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import { TMULogo } from "@/components/shared/tmu-logo";
@@ -67,6 +68,7 @@ export function AppSidebar() {
           secondary: [
             { title: "Reports", href: "/admin/reports", icon: BarChart3 },
             { title: "Notifications", href: "/admin/notifications", icon: Bell },
+            { title: "Audit Trail", href: "/admin/audit-trail", icon: Shield },
           ],
           system: [
             { title: "Settings", href: "/admin/settings", icon: Settings },

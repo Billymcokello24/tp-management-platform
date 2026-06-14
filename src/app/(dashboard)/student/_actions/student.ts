@@ -36,14 +36,58 @@ export async function getStudentDashboardData() {
   const completedLessonPlans = student.lessonPlans.filter(lp => lp.status === "SUBMITTED" || lp.status === "APPROVED");
   const pendingLessonPlans = student.lessonPlans.filter(lp => lp.status === "DRAFT" || lp.status === "REJECTED");
   
-  // Quick calculation for TP completion (mock logic based on 15 LPs and 3 Assessments)
+  // TP completion based on 15 LPs and 6 Assessments
   const lpProgress = Math.min((completedLessonPlans.length / 15) * 50, 50);
-  const assessmentProgress = Math.min((student.assessments.length / 3) * 50, 50);
+  const assessmentProgress = Math.min((student.assessments.length / 6) * 50, 50);
   const totalProgress = Math.round(lpProgress + assessmentProgress);
 
   const avgScore = student.assessments.length > 0 
     ? Math.round(student.assessments.reduce((sum, a) => sum + a.totalMarks, 0) / student.assessments.length)
     : 0;
+
+  // Organize assessments into A1S1, A1S2, A2S1, A2S2, A3S1, A3S2 slots
+  const s1 = student.subjects?.[0] || "Subject 1";
+  const s2 = student.subjects?.[1] || "Subject 2";
+
+  type SlotData = { id: string; totalMarks: number; grade: string; subject: string; lecturerName: string } | null;
+
+  const assessmentSlots: Record<string, SlotData> = {
+    a1s1: null, a1s2: null,
+    a2s1: null, a2s2: null,
+    a3s1: null, a3s2: null,
+  };
+
+  for (const a of student.assessments) {
+    const slotData = {
+      id: a.id,
+      totalMarks: a.totalMarks,
+      grade: a.grade || "N/A",
+      subject: a.subject || "N/A",
+      lecturerName: student.assignment?.lecturer?.user?.name || "N/A",
+    };
+    if (a.assessmentNumber === 1 && a.subject === s1) assessmentSlots.a1s1 = slotData;
+    else if (a.assessmentNumber === 1 && a.subject === s2) assessmentSlots.a1s2 = slotData;
+    else if (a.assessmentNumber === 2 && a.subject === s1) assessmentSlots.a2s1 = slotData;
+    else if (a.assessmentNumber === 2 && a.subject === s2) assessmentSlots.a2s2 = slotData;
+    else if (a.assessmentNumber === 3 && a.subject === s1) assessmentSlots.a3s1 = slotData;
+    else if (a.assessmentNumber === 3 && a.subject === s2) assessmentSlots.a3s2 = slotData;
+  }
+
+  // Subject averages and overall summary
+  const s1Assessments = student.assessments.filter(a => a.subject === s1);
+  const s2Assessments = student.assessments.filter(a => a.subject === s2);
+  const s1Avg = s1Assessments.length > 0 ? Math.round(s1Assessments.reduce((s, a) => s + a.totalMarks, 0) / s1Assessments.length) : 0;
+  const s2Avg = s2Assessments.length > 0 ? Math.round(s2Assessments.reduce((s, a) => s + a.totalMarks, 0) / s2Assessments.length) : 0;
+
+  const finalTPAvg = avgScore;
+  let finalGrade = "N/A";
+  if (finalTPAvg >= 70) finalGrade = "A";
+  else if (finalTPAvg >= 60) finalGrade = "B";
+  else if (finalTPAvg >= 50) finalGrade = "C";
+  else if (finalTPAvg >= 40) finalGrade = "D";
+  else if (student.assessments.length > 0) finalGrade = "E";
+
+  const completionPercentage = Math.round((student.assessments.length / 6) * 100);
 
   return {
     studentId: student.id,
@@ -55,6 +99,17 @@ export async function getStudentDashboardData() {
       completedAssessments: student.assessments.length,
       currentScore: avgScore,
       progressPercentage: totalProgress,
+    },
+    assessmentSlots,
+    overallSummary: {
+      s1Name: s1,
+      s2Name: s2,
+      s1Average: s1Avg,
+      s2Average: s2Avg,
+      assessmentAverage: avgScore,
+      finalTPAverage: finalTPAvg,
+      finalGrade,
+      completionPercentage,
     },
     recentLessonPlans: student.lessonPlans.slice(0, 5),
   };

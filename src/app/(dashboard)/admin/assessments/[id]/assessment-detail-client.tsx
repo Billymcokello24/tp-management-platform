@@ -45,6 +45,8 @@ export function AssessmentDetailClient({ student: propStudent, assessments }: { 
   const a1s2 = assessments.find(a => a.assessmentNumber === 1 && a.subject === getS2());
   const a2s1 = assessments.find(a => a.assessmentNumber === 2 && a.subject === getS1());
   const a2s2 = assessments.find(a => a.assessmentNumber === 2 && a.subject === getS2());
+  const a3s1 = assessments.find(a => a.assessmentNumber === 3 && a.subject === getS1());
+  const a3s2 = assessments.find(a => a.assessmentNumber === 3 && a.subject === getS2());
 
   const getValue = (assessment: any, key: string) => assessment?.[key] ?? "-";
   const getNum = (assessment: any, key: string) => assessment?.[key] ?? 0;
@@ -324,6 +326,90 @@ export function AssessmentDetailClient({ student: propStudent, assessments }: { 
               </tr>
             </tbody>
           </table>
+
+          {/* Lecturer Location / GPS Verification */}
+          <div style={{ marginBottom: "15px" }}>
+            <h3 style={{ fontSize: "10px", fontWeight: "bold", color: "#9A1E31", borderBottom: "1px solid #9A1E31", paddingBottom: "4px", marginBottom: "8px", textTransform: "uppercase" }}>
+              Lecturer Location / GPS Verification
+            </h3>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "8px" }}>
+              <thead>
+                <tr style={{ background: "#1f2937", color: "#fff" }}>
+                  <th style={{ padding: "3px", border: "1px solid #000", textAlign: "left" }}>Slot</th>
+                  <th style={{ padding: "3px", border: "1px solid #000", textAlign: "left" }}>Lecturer</th>
+                  <th style={{ padding: "3px", border: "1px solid #000", textAlign: "left" }}>Subject</th>
+                  <th style={{ padding: "3px", border: "1px solid #000", textAlign: "center" }}>Lecturer Lat</th>
+                  <th style={{ padding: "3px", border: "1px solid #000", textAlign: "center" }}>Lecturer Lng</th>
+                <th style={{ padding: "3px", border: "1px solid #000", textAlign: "center" }}>Accuracy</th>
+                <th style={{ padding: "3px", border: "1px solid #000", textAlign: "center" }}>Distance</th>
+                  <th style={{ padding: "3px", border: "1px solid #000", textAlign: "center" }}>Verified</th>
+                <th style={{ padding: "3px", border: "1px solid #000", textAlign: "center" }}>Status</th>
+                  <th style={{ padding: "3px", border: "1px solid #000", textAlign: "left" }}>Note</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[ 
+                  { label: "A1S1", a: a1s1, subject: getS1() },
+                  { label: "A1S2", a: a1s2, subject: getS2() },
+                  { label: "A2S1", a: a2s1, subject: getS1() },
+                  { label: "A2S2", a: a2s2, subject: getS2() },
+                { label: "A3S1", a: a3s1, subject: getS1() },
+                { label: "A3S2", a: a3s2, subject: getS2() },
+                ].map(({ label, a, subject }) => (
+                  <tr key={label}>
+                    <td style={{ padding: "3px", border: "1px solid #000", fontWeight: "bold" }}>{label}</td>
+                    <td style={{ padding: "3px", border: "1px solid #000" }}>{a?.lecturer?.user?.name || "—"}</td>
+                    <td style={{ padding: "3px", border: "1px solid #000" }}>{subject}</td>
+                    <td style={{ padding: "3px", border: "1px solid #000", textAlign: "center" }}>
+                      {a?.submissionLatitude != null ? (a.submissionLatitude as number).toFixed(5) : "—"}
+                    </td>
+                    <td style={{ padding: "3px", border: "1px solid #000", textAlign: "center" }}>
+                      {a?.submissionLongitude != null ? (a.submissionLongitude as number).toFixed(5) : "—"}
+                    </td>
+                  <td style={{ padding: "3px", border: "1px solid #000", textAlign: "center" }}>
+                    {a?.gpsAccuracy != null ? `${Math.round(a.gpsAccuracy as number)}m` : "—"}
+                  </td>
+                  <td style={{ padding: "3px", border: "1px solid #000", textAlign: "center" }}>
+                    {a?.submissionLatitude != null && student?.school?.latitude != null
+                      ? `${Math.round(
+                          ((a: any, school: any) => {
+                            const R = 6371000;
+                            const dLat = (school.latitude - a.submissionLatitude) * Math.PI / 180;
+                            const dLon = (school.longitude - a.submissionLongitude) * Math.PI / 180;
+                            const lat1 = a.submissionLatitude * Math.PI / 180;
+                            const lat2 = school.latitude * Math.PI / 180;
+                            const aa = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;
+                            return R * 2 * Math.atan2(Math.sqrt(aa), Math.sqrt(1-aa));
+                          })(a, student.school)
+                        )}m`
+                      : "—"}
+                  </td>
+                    <td style={{ padding: "3px", border: "1px solid #000", textAlign: "center" }}>
+                      {a ? (a.isGeoVerified ? "✅ Yes" : "❌ No") : "—"}
+                    </td>
+                  <td style={{ padding: "3px", border: "1px solid #000", textAlign: "center" }}>
+                    {a ? (
+                      a.isGeoVerified
+                        ? <span style={{ background: "#10b981", color: "#fff", padding: "2px 6px", borderRadius: "4px", fontSize: "7px", fontWeight: "bold" }}>✓ VERIFIED</span>
+                        : <span style={{ background: "#ef4444", color: "#fff", padding: "2px 6px", borderRadius: "4px", fontSize: "7px", fontWeight: "bold" }}>✗ MISMATCH</span>
+                    ) : "—"}
+                  </td>
+                    <td style={{ padding: "3px", border: "1px solid #000", fontSize: "7px" }}>
+                      {a?.geoVerificationNote || "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {/* Student School Location for comparison */}
+            {student?.school?.latitude != null && student?.school?.longitude != null && (
+              <div style={{ marginTop: "6px", padding: "6px", background: "#f1f5f9", border: "1px solid #e2e8f0", fontSize: "8px" }}>
+                <strong>Student School Location:</strong> {student.school.name} — 
+                Lat: {(student.school.latitude as number).toFixed(5)}, Lng: {(student.school.longitude as number).toFixed(5)}
+                {student.school.geofenceRadius != null && ` (Geofence: ${student.school.geofenceRadius}m)`}
+              </div>
+            )}
+          </div>
 
           {/* Signatures */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "20px", marginTop: "30px" }}>

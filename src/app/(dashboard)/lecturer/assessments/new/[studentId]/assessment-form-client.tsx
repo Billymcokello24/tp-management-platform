@@ -82,13 +82,15 @@ export function AssessmentFormClient({ student, lecturerId, existingAssessments 
     else if (!submitted.find(a => a.assessmentNumber === 1 && a.subject === s2)) { setCurrentAssnNum("1"); setCurrentSubject(s2); }
     else if (!submitted.find(a => a.assessmentNumber === 2 && a.subject === s1)) { setCurrentAssnNum("2"); setCurrentSubject(s1); }
     else if (!submitted.find(a => a.assessmentNumber === 2 && a.subject === s2)) { setCurrentAssnNum("2"); setCurrentSubject(s2); }
+    else if (!submitted.find(a => a.assessmentNumber === 3 && a.subject === s1)) { setCurrentAssnNum("3"); setCurrentSubject(s1); }
+    else if (!submitted.find(a => a.assessmentNumber === 3 && a.subject === s2)) { setCurrentAssnNum("3"); setCurrentSubject(s2); }
   }, [submitted, anyDraft, activeDraft, s1, s2]);
 
   // Determine if the current slot is already submitted
   const isCurrentSlotSubmitted = !!submitted.find(a => a.assessmentNumber === parseInt(currentAssnNum) && a.subject === currentSubject);
 
   const completedCount = submitted.length;
-  const allDone = completedCount >= 4;
+  const allDone = completedCount >= 6;
 
   // Initialize marks from draft if it exists for this slot, else default
   useEffect(() => {
@@ -128,6 +130,7 @@ export function AssessmentFormClient({ student, lecturerId, existingAssessments 
     if (geo.position) {
       gpsData.submissionLatitude = geo.position.latitude;
       gpsData.submissionLongitude = geo.position.longitude;
+      gpsData.gpsAccuracy = geo.position.accuracy ?? null;
       const locLabel = geo.position.locationName || `${geo.position.latitude.toFixed(5)}, ${geo.position.longitude.toFixed(5)}`;
       if (geofenceResult) {
         gpsData.isGeoVerified = geofenceResult.isInside;
@@ -203,12 +206,14 @@ export function AssessmentFormClient({ student, lecturerId, existingAssessments 
     </div>
   );
 
-  // ── Step tracker items (A1S1, A1S2, A2S1, A2S2) ──
+  // ── Step tracker items (A1S1, A1S2, A2S1, A2S2, A3S1, A3S2) ──
   const slots = [
       { id: '1', num: 1, sub: s1, label: 'A1S1' },
       { id: '2', num: 1, sub: s2, label: 'A1S2' },
       { id: '3', num: 2, sub: s1, label: 'A2S1' },
-      { id: '4', num: 2, sub: s2, label: 'A2S2' }
+      { id: '4', num: 2, sub: s2, label: 'A2S2' },
+      { id: '5', num: 3, sub: s1, label: 'A3S1' },
+      { id: '6', num: 3, sub: s2, label: 'A3S2' }
   ];
 
   const slotStatus = slots.map((slot, index) => {
@@ -243,14 +248,14 @@ export function AssessmentFormClient({ student, lecturerId, existingAssessments 
         <div><span className="font-semibold text-muted-foreground">Course:</span> {student.course}</div>
       </div>
 
-      {/* ── 4-SLOT ASSESSMENT TRACKER ── */}
+      {/* ── 6-SLOT ASSESSMENT TRACKER ── */}
       <Card className="border-2 border-primary/20">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm">Assessment Progression</CardTitle>
-          <CardDescription className="text-xs">Each student requires 4 assessments (First & Second Assessment for two subjects).</CardDescription>
+          <CardDescription className="text-xs">Each student requires 6 assessments (First, Second, and Third Assessment for two subjects).</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-4">
             {slotStatus.map((step, i) => (
               <button
                 key={step.id}
@@ -302,9 +307,9 @@ export function AssessmentFormClient({ student, lecturerId, existingAssessments 
         <Card className="border-emerald-300 bg-emerald-50/50 dark:bg-emerald-950/20">
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <CheckCircle2 className="h-12 w-12 text-emerald-600 mb-4" />
-            <h2 className="text-xl font-bold text-emerald-800 dark:text-emerald-300">All 4 Assessments Completed</h2>
+            <h2 className="text-xl font-bold text-emerald-800 dark:text-emerald-300">All 6 Assessments Completed</h2>
             <p className="text-sm text-muted-foreground mt-2 max-w-md">
-              General Average: <span className="font-bold text-foreground">{Math.round(submitted.reduce((s, a) => s + a.totalMarks, 0) / 4)}/100</span>
+              General Average: <span className="font-bold text-foreground">{Math.round(submitted.reduce((s, a) => s + a.totalMarks, 0) / 6)}/100</span>
             </p>
             <Button variant="outline" className="mt-6" onClick={() => router.push("/lecturer/students")}>← Back to Students</Button>
           </CardContent>
@@ -322,6 +327,7 @@ export function AssessmentFormClient({ student, lecturerId, existingAssessments 
                       <SelectContent>
                           <SelectItem value="1">First Assessment</SelectItem>
                           <SelectItem value="2">Second Assessment</SelectItem>
+                          <SelectItem value="3">Third Assessment</SelectItem>
                       </SelectContent>
                   </Select>
               </div>

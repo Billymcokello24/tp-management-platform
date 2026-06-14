@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logAssessmentSubmitted } from "@/lib/audit-log";
 import { revalidatePath } from "next/cache";
 
 export async function getStudentForAssessment(studentId: string) {
@@ -111,6 +112,7 @@ export async function submitAssessment(data: any) {
     areasOfImprovement: data.areasOfImprovement || "",
     submissionLatitude: data.submissionLatitude ?? null,
     submissionLongitude: data.submissionLongitude ?? null,
+    gpsAccuracy: data.gpsAccuracy ?? null,
     isGeoVerified: data.isGeoVerified ?? false,
     geoVerificationNote: data.geoVerificationNote ?? null,
   };
@@ -126,6 +128,9 @@ export async function submitAssessment(data: any) {
       data: payload
     });
   }
+
+  // Log to audit trail
+  await logAssessmentSubmitted(assessment.id, data.lecturerId, data.studentId, data.subject || "Unspecified", totalMarks);
 
   revalidatePath("/lecturer/students");
   revalidatePath("/lecturer/dashboard");

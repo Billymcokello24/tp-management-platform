@@ -2,7 +2,15 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { BookOpen, FileText, ClipboardCheck, GraduationCap, MapPin, UserCheck, AlertTriangle } from "lucide-react";
+import { BookOpen, FileText, ClipboardCheck, GraduationCap, MapPin, UserCheck, AlertTriangle, CheckCircle2, Clock, CircleDashed, TrendingUp } from "lucide-react";
+
+interface AssessmentSlot {
+  id: string;
+  totalMarks: number;
+  grade: string;
+  subject: string;
+  lecturerName: string;
+}
 
 interface DashboardProps {
   stats: {
@@ -21,9 +29,35 @@ interface DashboardProps {
   }[];
   school: { name: string; county: string; principal: string; phone: string } | null;
   lecturer: { name: string; department: string; email: string; phone: string } | null;
+  assessmentSlots: Record<string, AssessmentSlot | null>;
+  overallSummary: {
+    s1Name: string;
+    s2Name: string;
+    s1Average: number;
+    s2Average: number;
+    assessmentAverage: number;
+    finalTPAverage: number;
+    finalGrade: string;
+    completionPercentage: number;
+  };
 }
 
-export function StudentDashboardClient({ stats, recentLessonPlans, school, lecturer }: DashboardProps) {
+const scoreColor = (score: number | undefined) => {
+  if (!score) return "text-muted-foreground";
+  if (score >= 70) return "text-emerald-600 font-bold";
+  if (score < 40) return "text-red-600 font-bold";
+  return "text-foreground font-semibold";
+};
+
+const gradeBadge = (grade: string) => {
+  if (grade === "A") return "bg-emerald-100 text-emerald-800";
+  if (grade === "B") return "bg-blue-100 text-blue-800";
+  if (grade === "C") return "bg-amber-100 text-amber-800";
+  if (grade === "D" || grade === "E") return "bg-red-100 text-red-800";
+  return "bg-slate-200 text-slate-800";
+};
+
+export function StudentDashboardClient({ stats, recentLessonPlans, school, lecturer, assessmentSlots, overallSummary }: DashboardProps) {
   const hour = new Date().getHours();
   let greeting = "Good Evening";
   if (hour < 12) greeting = "Good Morning";
@@ -38,173 +72,267 @@ export function StudentDashboardClient({ stats, recentLessonPlans, school, lectu
             <div className="h-2 w-2 rounded-full bg-primary animate-pulse"></div>
             <span className="text-xs font-bold uppercase tracking-widest text-primary">Student Dashboard</span>
           </div>
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">
-            {greeting}, <span className="text-primary">Trainee</span>
+          <h1 className="text-4xl font-extrabold tracking-tight text-foreground">
+            {greeting}, Student
           </h1>
           <p className="text-sm text-muted-foreground mt-2 font-medium">
-            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
-            <span className="mx-2 text-border">•</span> 
-            <span className="text-primary/80">TP Session Active</span>
+            Here is your Teaching Practice overview and progress.
           </p>
         </div>
-        
-        {/* Optional right-side accent */}
-        <div className="bg-card border border-border/50 shadow-sm rounded-2xl px-6 py-4 flex flex-col items-center justify-center shrink-0">
-          <div className="text-2xl font-bold tracking-tight">
-            {new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-          </div>
-          <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-600 mt-1">
-            <div className="h-1.5 w-1.5 rounded-full bg-emerald-500"></div>
-            Session Tracked
-          </div>
-        </div>
       </div>
 
-      {/* Progress Tracker */}
-      <Card className="bg-primary text-primary-foreground border-0 shadow-md">
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-            <div>
-              <h2 className="text-xl font-bold">Overall TP Progress</h2>
-              <p className="text-primary-foreground/80 text-sm">Based on submitted lesson plans and completed assessments.</p>
-            </div>
-            <div className="text-4xl font-bold">{stats.progressPercentage}%</div>
-          </div>
-          <Progress value={stats.progressPercentage} className="h-3 bg-primary-foreground/20 [&>div]:bg-white" />
-        </CardContent>
-      </Card>
-
-      {/* Stat Cards - Premium Layout */}
-      <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="relative overflow-hidden group hover:shadow-md transition-all duration-300">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-start">
-              <div className="space-y-2">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Completed Plans</p>
-                <div className="text-4xl font-extrabold text-foreground">{stats.completedLessonPlans}</div>
-                <p className="text-xs font-medium text-muted-foreground/70">SUBMITTED</p>
-              </div>
-              <div className="p-3.5 rounded-2xl bg-blue-50 dark:bg-blue-950/30 group-hover:scale-110 transition-transform duration-300">
-                <BookOpen className="h-6 w-6 text-blue-600" />
-              </div>
-            </div>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Completed LPs</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.completedLessonPlans}</div>
           </CardContent>
         </Card>
-
-        <Card className="relative overflow-hidden group hover:shadow-md transition-all duration-300">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-start">
-              <div className="space-y-2">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Pending / Drafts</p>
-                <div className="text-4xl font-extrabold text-foreground">{stats.pendingLessonPlans}</div>
-                <p className="text-xs font-medium text-muted-foreground/70">TO REVIEW</p>
-              </div>
-              <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/30 group-hover:scale-110 transition-transform duration-300">
-                <FileText className="h-6 w-6 text-amber-600" />
-              </div>
-            </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending LPs</CardTitle>
+            <BookOpen className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.pendingLessonPlans}</div>
           </CardContent>
         </Card>
-
-        <Card className="relative overflow-hidden group hover:shadow-md transition-all duration-300">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-start">
-              <div className="space-y-2">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Assessments Done</p>
-                <div className="text-4xl font-extrabold text-foreground">{stats.completedAssessments}</div>
-                <p className="text-xs font-medium text-muted-foreground/70">COMPLETED</p>
-              </div>
-              <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 group-hover:scale-110 transition-transform duration-300">
-                <ClipboardCheck className="h-6 w-6 text-emerald-600" />
-              </div>
-            </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Assessments</CardTitle>
+            <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.completedAssessments}</div>
           </CardContent>
         </Card>
-
-        <Card className="relative overflow-hidden group hover:shadow-md transition-all duration-300">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-start">
-              <div className="space-y-2">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Current TP Score</p>
-                <div className="text-4xl font-extrabold text-foreground">{stats.currentScore > 0 ? `${stats.currentScore}%` : "N/A"}</div>
-                <p className="text-xs font-medium text-muted-foreground/70">AVERAGE</p>
-              </div>
-              <div className="p-3.5 rounded-2xl bg-primary/10 group-hover:scale-110 transition-transform duration-300">
-                <GraduationCap className="h-6 w-6 text-primary" />
-              </div>
-            </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg Score</CardTitle>
+            <GraduationCap className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.currentScore}%</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">TP Progress</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.progressPercentage}%</div>
+            <Progress value={stats.progressPercentage} className="h-2 mt-2" />
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {/* Placement Info */}
-        <div className="space-y-6">
+      {/* Assessment Slots — A1S1, A1S2, A2S1, A2S2, A3S1, A3S2 */}
+      <div>
+        <div className="flex items-center gap-2 mb-4">
+          <ClipboardCheck className="h-5 w-5 text-primary" />
+          <h2 className="text-xl font-bold">My Assessment Scores</h2>
+        </div>
+
+        {/* Subject-grouped table layout */}
+        <div className="space-y-4">
+          {/* Subject 1 Row */}
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-primary" /> Assigned School
-              </CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold text-primary">{overallSummary.s1Name}</CardTitle>
+              <CardDescription className="text-xs">Subject Average: {overallSummary.s1Average > 0 ? `${overallSummary.s1Average}%` : "N/A"}</CardDescription>
             </CardHeader>
             <CardContent>
-              {school ? (
-                <div className="space-y-2 text-sm">
-                  <p><span className="font-semibold text-muted-foreground">Name:</span> {school.name}</p>
-                  <p><span className="font-semibold text-muted-foreground">County:</span> {school.county}</p>
-                  <p><span className="font-semibold text-muted-foreground">Principal:</span> {school.principal}</p>
-                  <p><span className="font-semibold text-muted-foreground">Contact:</span> {school.phone}</p>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 text-amber-600 text-sm p-3 bg-amber-50 rounded-md">
-                  <AlertTriangle className="h-4 w-4" /> Not yet placed in a school.
-                </div>
-              )}
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: "A1S1", slot: assessmentSlots.a1s1 },
+                  { label: "A2S1", slot: assessmentSlots.a2s1 },
+                  { label: "A3S1", slot: assessmentSlots.a3s1 },
+                ].map(({ label, slot }) => (
+                  <div key={label} className={`p-3 rounded-xl border-2 text-center transition-all ${
+                    slot ? "border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20 dark:border-emerald-800" : "border-dashed border-border/60 bg-muted/20"
+                  }`}>
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">{label}</div>
+                    {slot ? (
+                      <>
+                        <div className={scoreColor(slot.totalMarks) + " text-2xl"}>{slot.totalMarks}%</div>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${gradeBadge(slot.grade)}`}>Grade: {slot.grade}</span>
+                        <div className="flex items-center justify-center gap-1 mt-1">
+                          <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                          <span className="text-[10px] text-emerald-600 font-medium">Completed</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-lg text-muted-foreground/50 font-semibold">—</div>
+                        <div className="flex items-center justify-center gap-1 mt-1">
+                          <CircleDashed className="h-3 w-3 text-muted-foreground/50" />
+                          <span className="text-[10px] text-muted-foreground/50 font-medium">Not Started</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
 
+          {/* Subject 2 Row */}
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <UserCheck className="h-5 w-5 text-emerald-600" /> Assigned Supervisor
-              </CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold text-primary">{overallSummary.s2Name}</CardTitle>
+              <CardDescription className="text-xs">Subject Average: {overallSummary.s2Average > 0 ? `${overallSummary.s2Average}%` : "N/A"}</CardDescription>
             </CardHeader>
             <CardContent>
-              {lecturer ? (
-                <div className="space-y-2 text-sm">
-                  <p><span className="font-semibold text-muted-foreground">Name:</span> {lecturer.name}</p>
-                  <p><span className="font-semibold text-muted-foreground">Department:</span> {lecturer.department}</p>
-                  <p><span className="font-semibold text-muted-foreground">Email:</span> {lecturer.email}</p>
-                  <p><span className="font-semibold text-muted-foreground">Phone:</span> {lecturer.phone}</p>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 text-amber-600 text-sm p-3 bg-amber-50 rounded-md">
-                  <AlertTriangle className="h-4 w-4" /> No supervisor assigned yet.
-                </div>
-              )}
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: "A1S2", slot: assessmentSlots.a1s2 },
+                  { label: "A2S2", slot: assessmentSlots.a2s2 },
+                  { label: "A3S2", slot: assessmentSlots.a3s2 },
+                ].map(({ label, slot }) => (
+                  <div key={label} className={`p-3 rounded-xl border-2 text-center transition-all ${
+                    slot ? "border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20 dark:border-emerald-800" : "border-dashed border-border/60 bg-muted/20"
+                  }`}>
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">{label}</div>
+                    {slot ? (
+                      <>
+                        <div className={scoreColor(slot.totalMarks) + " text-2xl"}>{slot.totalMarks}%</div>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${gradeBadge(slot.grade)}`}>Grade: {slot.grade}</span>
+                        <div className="flex items-center justify-center gap-1 mt-1">
+                          <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                          <span className="text-[10px] text-emerald-600 font-medium">Completed</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-lg text-muted-foreground/50 font-semibold">—</div>
+                        <div className="flex items-center justify-center gap-1 mt-1">
+                          <CircleDashed className="h-3 w-3 text-muted-foreground/50" />
+                          <span className="text-[10px] text-muted-foreground/50 font-medium">Not Started</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Recent Activity */}
-        <Card className="lg:col-span-2">
+        {/* Overall Student Summary */}
+        <Card className="mt-4 border-primary/20 bg-primary/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-primary" /> Overall TP Summary
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+              <div className="text-center">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{overallSummary.s1Name} Avg</div>
+                <div className="text-2xl font-bold">{overallSummary.s1Average > 0 ? `${overallSummary.s1Average}%` : "N/A"}</div>
+              </div>
+              <div className="text-center">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{overallSummary.s2Name} Avg</div>
+                <div className="text-2xl font-bold">{overallSummary.s2Average > 0 ? `${overallSummary.s2Average}%` : "N/A"}</div>
+              </div>
+              <div className="text-center">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">TP Average</div>
+                <div className="text-2xl font-bold text-primary">{overallSummary.finalTPAverage > 0 ? `${overallSummary.finalTPAverage}%` : "N/A"}</div>
+              </div>
+              <div className="text-center">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Final Grade</div>
+                <div className="text-2xl font-bold">
+                  <span className={`px-2.5 py-0.5 rounded-full ${gradeBadge(overallSummary.finalGrade)}`}>{overallSummary.finalGrade}</span>
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Completion</div>
+                <div className="text-2xl font-bold">{overallSummary.completionPercentage}%</div>
+                <Progress value={overallSummary.completionPercentage} className="h-1.5 mt-1" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="mt-2 text-right">
+          <a href="/student/assessments" className="text-sm text-primary hover:underline">
+            View Full Assessment Report →
+          </a>
+        </div>
+      </div>
+
+      {/* School and Lecturer Info */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
           <CardHeader>
-            <CardTitle>Recent Lesson Plans</CardTitle>
-            <CardDescription>Your latest submissions and drafts</CardDescription>
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-primary" />
+              My School / Station
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {school ? (
+              <div className="space-y-1 text-sm">
+                <div className="font-semibold">{school.name}</div>
+                <div className="text-muted-foreground">{school.county}</div>
+                <div className="text-muted-foreground">Principal: {school.principal}</div>
+                <div className="text-muted-foreground">Phone: {school.phone}</div>
+              </div>
+            ) : (
+              <div className="text-muted-foreground text-sm">No school assigned. Set your station.</div>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <UserCheck className="h-4 w-4 text-primary" />
+              My Supervisor (Lecturer)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {lecturer ? (
+              <div className="space-y-1 text-sm">
+                <div className="font-semibold">{lecturer.name}</div>
+                <div className="text-muted-foreground">{lecturer.department}</div>
+                <div className="text-muted-foreground">Email: {lecturer.email}</div>
+                <div className="text-muted-foreground">Phone: {lecturer.phone}</div>
+              </div>
+            ) : (
+              <div className="text-muted-foreground text-sm">No supervisor assigned yet.</div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Recent Lesson Plans */}
+      <div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold">Recent Lesson Plans</CardTitle>
+            <CardDescription>Your latest submitted lesson plans</CardDescription>
           </CardHeader>
           <CardContent>
             {recentLessonPlans.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {recentLessonPlans.map((lp) => (
-                  <div key={lp.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                  <div key={lp.id} className="flex items-center justify-between border-b pb-2 last:border-0">
                     <div>
-                      <p className="font-medium">{lp.topic}</p>
-                      <p className="text-xs text-muted-foreground">{lp.subject} • {new Date(lp.date).toLocaleDateString()}</p>
+                      <div className="font-medium text-sm">{lp.topic}</div>
+                      <div className="text-xs text-muted-foreground">{lp.subject} • {new Date(lp.date).toLocaleDateString()}</div>
                     </div>
-                    <div className={`text-xs px-2 py-1 rounded-full font-medium ${
-                      lp.status === "APPROVED" ? "bg-green-100 text-green-800" : 
-                      lp.status === "DRAFT" ? "bg-slate-200 text-slate-800" : 
-                      "bg-blue-100 text-blue-800"
-                    }`}>
+                    <div
+                      className={`text-xs px-2 py-1 rounded-full font-medium ${
+                        lp.status === "APPROVED" ? "bg-green-100 text-green-800" : 
+                        lp.status === "DRAFT" ? "bg-slate-200 text-slate-800" : 
+                        "bg-blue-100 text-blue-800"
+                      }`}
+                    >
                       {lp.status}
                     </div>
                   </div>

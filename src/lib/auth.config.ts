@@ -67,6 +67,11 @@ export default {
       if (user) {
         token.id = user.id;
         token.role = (user as any).role;
+
+        // Log login to audit trail (server-side, fire-and-forget)
+        import("./audit-log").then(({ logUserLogin }) => {
+          logUserLogin(user.id as string).catch(() => {});
+        });
       }
       return token;
     },

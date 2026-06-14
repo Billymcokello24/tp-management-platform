@@ -32,6 +32,8 @@ export default async function StudentDashboardPage() {
       recentLessonPlans={serializedLPs}
       school={serializedSchool}
       lecturer={serializedLecturer}
+      assessmentSlots={data.assessmentSlots}
+      overallSummary={data.overallSummary}
     />
   );
 }
