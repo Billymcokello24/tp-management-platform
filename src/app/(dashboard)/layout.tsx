@@ -3,6 +3,7 @@ import { AppSidebar } from "@/components/dashboard/app-sidebar";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { SessionProvider } from "@/components/shared/session-provider";
 import { TMULogo } from "@/components/shared/tmu-logo";
+import { InactivityMonitor } from "@/components/shared/inactivity-monitor";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,7 @@ export default function DashboardLayout({
 }) {
   return (
     <SessionProvider>
+      <InactivityMonitor />
       <SidebarProvider>
         <AppSidebar />
         <main className="flex-1 flex flex-col min-h-screen min-w-0 bg-background overflow-x-hidden">

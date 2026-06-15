@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,6 +55,9 @@ interface LocationAssessment {
   schoolName: string | null;
   schoolLat: number | null;
   schoolLng: number | null;
+  schoolCounty: string | null;
+  schoolSubCounty: string | null;
+  schoolWard: string | null;
   distanceFromSchool: number | null;
   withinGeofence: boolean | null;
 }
@@ -72,6 +75,57 @@ interface LecturerLocationReport {
     outsideGeofence: number;
     averageDistanceMeters: number;
   };
+}
+
+/** Build a human-readable school location from county/sub-county/ward */
+function schoolLocationString(a: LocationAssessment): string {
+  const parts = [a.schoolCounty, a.schoolSubCounty, a.schoolWard].filter(Boolean);
+  return parts.length > 0 ? parts.join(", ") : (a.schoolName || "—");
+}
+
+/** Client-side reverse geocode with simple cache */
+const locationNameCache = new Map<string, string>();
+
+function useLocationName(lat: number | null, lng: number | null): string {
+  const [name, setName] = useState<string>("");
+
+  useEffect(() => {
+    if (lat == null || lng == null) return;
+    const key = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+    if (locationNameCache.has(key)) {
+      setName(locationNameCache.get(key)!);
+      return;
+    }
+    let cancelled = false;
+    fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&zoom=16`,
+      { headers: { "User-Agent": "TMU-TP-Management-Platform/1.0" } }
+    )
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        if (data?.display_name) {
+          const parts = (data.display_name as string).split(", ");
+          const short = parts.slice(0, 3).join(", ");
+          locationNameCache.set(key, short);
+          setName(short);
+        } else {
+          setName(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setName(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+      });
+    return () => { cancelled = true; };
+  }, [lat, lng]);
+
+  return name;
+}
+
+function LocationCell({ lat, lng, fallback }: { lat: number | null; lng: number | null; fallback?: string }) {
+  const name = useLocationName(lat, lng);
+  const display = name || fallback || "—";
+  return <span title={lat != null ? `${lat.toFixed(5)}, ${lng?.toFixed(5)}` : undefined}>{display}</span>;
 }
 
 export function ReportsClient({
@@ -464,12 +518,12 @@ export function ReportsClient({
                               A{a.assessmentNumber}
                             </td>
                             <td className="py-1.5 px-2 text-center text-xs">
-                              {a.lecturerLat.toFixed(5)}, {a.lecturerLng.toFixed(5)}
+                              <LocationCell lat={a.lecturerLat} lng={a.lecturerLng} fallback="No GPS" />
                             </td>
                             <td className="py-1.5 px-2 text-center text-xs">
-                              {a.schoolLat != null && a.schoolLng != null ? (
+                              {a.schoolName ? (
                                 <>
-                                  {a.schoolLat.toFixed(5)}, {a.schoolLng.toFixed(5)}
+                                  <span>{schoolLocationString(a)}</span>
                                   <div className="text-muted-foreground text-xs">{a.schoolName}</div>
                                 </>
                               ) : (

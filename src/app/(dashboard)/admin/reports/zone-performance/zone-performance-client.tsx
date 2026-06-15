@@ -36,7 +36,7 @@ export function ZonePerformanceClient({ data }: { data: ZonePerformance[] }) {
     const el = printRef.current;
     if (!el) return;
     el.classList.remove("hidden");
-    const opt = { margin: 8, filename: `TMU_Zone_Performance_Report.pdf`, image: { type: "jpeg", quality: 0.98 }, html2canvas: { scale: 2, useCORS: true, letterRendering: true }, jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const } };
+    const opt = { margin: 8, filename: `TMU_Zone_Performance_Report.pdf`, image: { type: "jpeg", quality: 0.98 }, html2canvas: { scale: 2, useCORS: true, letterRendering: true }, pagebreak: { mode: ["avoid-all", "css", "legacy"] }, jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const } };
     await html2pdf().set(opt as any).from(el).save();
     el.classList.add("hidden");
   };

@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Printer, Download, Search, GraduationCap, MapPin, Award, TrendingUp, CheckCircle2, XCircle, FileText, FileDown } from "lucide-react";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { PdfReportHeader, PdfReportFooter, PdfInfoBlock } from "@/components/shared/pdf-report-components";
 import { ComboboxFilter } from "@/components/shared/combobox-filter";
 
@@ -58,6 +58,51 @@ export function StudentCompleteTPClient({ data }: { data: StudentCompleteTP[] })
   const printRef = useRef<HTMLDivElement>(null);
   const allPrintRef = useRef<HTMLDivElement>(null);
 
+  // Client-side reverse geocode cache
+  const locationNameCache = new Map<string, string>();
+
+  function useLocationName(lat: number | null, lng: number | null): string {
+    const [name, setName] = useState<string>("");
+
+    useEffect(() => {
+      if (lat == null || lng == null) return;
+      const key = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+      if (locationNameCache.has(key)) {
+        setName(locationNameCache.get(key)!);
+        return;
+      }
+      let cancelled = false;
+      fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&zoom=16`,
+        { headers: { "User-Agent": "TMU-TP-Management-Platform/1.0" } }
+      )
+        .then((r) => r.json())
+        .then((data) => {
+          if (cancelled) return;
+          if (data?.display_name) {
+            const parts = (data.display_name as string).split(", ");
+            const short = parts.slice(0, 3).join(", ");
+            locationNameCache.set(key, short);
+            setName(short);
+          } else {
+            setName(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setName(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+        });
+      return () => { cancelled = true; };
+    }, [lat, lng]);
+
+    return name;
+  }
+
+  function LocationCell({ lat, lng, fallback }: { lat: number | null; lng: number | null; fallback?: string }) {
+    const name = useLocationName(lat, lng);
+    const display = name || fallback || "—";
+    return <span title={lat != null ? `${lat.toFixed(5)}, ${lng?.toFixed(5)}` : undefined}>{display}</span>;
+  }
+
   const filtered = data.filter((s) =>
     s.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     s.admissionNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -86,6 +131,7 @@ export function StudentCompleteTPClient({ data }: { data: StudentCompleteTP[] })
     const opt = {
       margin: 8,
       filename: `TMU_Student_TP_Report_${selectedStudent.admissionNumber}.pdf`,
+      pagebreak: { mode: ["avoid-all", "css", "legacy"] },
       image: { type: "jpeg", quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true, letterRendering: true },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const },
@@ -109,7 +155,7 @@ export function StudentCompleteTPClient({ data }: { data: StudentCompleteTP[] })
         letterRendering: true,
         windowWidth: 800,
       },
-      pagebreak: { mode: ["css", "legacy"] },
+      pagebreak: { mode: ["avoid-all", "css", "legacy"] },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const },
     };
     await html2pdf().set(opt as any).from(el).save();
@@ -262,7 +308,7 @@ export function StudentCompleteTPClient({ data }: { data: StudentCompleteTP[] })
               {selectedStudent.gpsSummary.totalTracked > 0 && (
                 <div><h4 className="text-sm font-semibold mb-3 flex items-center gap-2"><MapPin className="h-4 w-4" /> GPS Location Audit</h4>
                   <div className="overflow-x-auto"><table className="w-full text-xs"><thead className="bg-muted/60"><tr><th className="py-1 px-2 text-left">Assessment</th><th className="py-1 px-2 text-left">Lecturer</th><th className="py-1 px-2 text-center">Location</th><th className="py-1 px-2 text-center">Accuracy</th><th className="py-1 px-2 text-center">Status</th></tr></thead>
-                    <tbody>{selectedStudent.assessments.filter((a) => a.submissionLatitude != null).map((a) => (<tr key={a.id} className="border-t"><td className="py-1 px-2 font-medium">A{a.assessmentNumber} — {a.subject}</td><td className="py-1 px-2">{a.lecturerName}</td><td className="py-1 px-2 text-center text-[10px]">{a.submissionLatitude?.toFixed(5)}, {a.submissionLongitude?.toFixed(5)}</td><td className="py-1 px-2 text-center">{a.gpsAccuracy != null ? `${Math.round(a.gpsAccuracy)}m` : "—"}</td><td className="py-1 px-2 text-center">{a.isGeoVerified ? <span className="text-emerald-600 font-medium"><CheckCircle2 className="h-3 w-3 inline" /> Verified</span> : <span className="text-red-600 font-medium"><XCircle className="h-3 w-3 inline" /> Mismatch</span>}</td></tr>))}</tbody></table></div>
+                    <tbody>{selectedStudent.assessments.filter((a) => a.submissionLatitude != null).map((a) => (<tr key={a.id} className="border-t"><td className="py-1 px-2 font-medium">A{a.assessmentNumber} — {a.subject}</td><td className="py-1 px-2">{a.lecturerName}</td><td className="py-1 px-2 text-center text-[10px]"><LocationCell lat={a.submissionLatitude ?? null} lng={a.submissionLongitude ?? null} fallback="—" /></td><td className="py-1 px-2 text-center">{a.gpsAccuracy != null ? `${Math.round(a.gpsAccuracy)}m` : "—"}</td><td className="py-1 px-2 text-center">{a.isGeoVerified ? <span className="text-emerald-600 font-medium"><CheckCircle2 className="h-3 w-3 inline" /> Verified</span> : <span className="text-red-600 font-medium"><XCircle className="h-3 w-3 inline" /> Mismatch</span>}</td></tr>))}</tbody></table></div>
                 </div>
               )}
               <div><h4 className="text-sm font-semibold mb-3">Assessment Comments</h4>

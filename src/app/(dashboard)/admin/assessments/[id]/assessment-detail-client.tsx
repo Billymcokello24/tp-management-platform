@@ -29,6 +29,7 @@ export function AssessmentDetailClient({ student: propStudent, assessments }: { 
       filename: `TMU_Assessment_${student.admissionNumber}.pdf`,
       image: { type: "jpeg", quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+      pagebreak: { mode: ["avoid-all", "css", "legacy"] },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
     };
 

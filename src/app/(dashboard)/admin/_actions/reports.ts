@@ -237,7 +237,7 @@ export async function getLecturerLocationReports() {
       student: {
         include: {
           user: { select: { name: true } },
-          school: { select: { name: true, latitude: true, longitude: true, geofenceRadius: true } },
+          school: { select: { name: true, latitude: true, longitude: true, geofenceRadius: true, county: true, subCounty: true, ward: true } },
         },
       },
     },
@@ -263,6 +263,9 @@ export async function getLecturerLocationReports() {
       schoolName: string | null;
       schoolLat: number | null;
       schoolLng: number | null;
+      schoolCounty: string | null;
+      schoolSubCounty: string | null;
+      schoolWard: string | null;
       distanceFromSchool: number | null;
       withinGeofence: boolean | null;
     }[];
@@ -316,6 +319,9 @@ export async function getLecturerLocationReports() {
       schoolName: a.student.school?.name || null,
       schoolLat: a.student.school?.latitude || null,
       schoolLng: a.student.school?.longitude || null,
+      schoolCounty: a.student.school?.county || null,
+      schoolSubCounty: a.student.school?.subCounty || null,
+      schoolWard: a.student.school?.ward || null,
       distanceFromSchool,
       withinGeofence,
     });
@@ -439,7 +445,7 @@ export async function getGPSAuditData() {
       student: {
         include: {
           user: { select: { name: true } },
-          school: { select: { name: true, latitude: true, longitude: true, geofenceRadius: true, county: true } },
+          school: { select: { name: true, latitude: true, longitude: true, geofenceRadius: true, county: true, subCounty: true, ward: true } },
         },
       },
     },
@@ -466,6 +472,9 @@ export async function getGPSAuditData() {
       schoolName: a.student.school?.name || "N/A",
       schoolLat: a.student.school?.latitude || null,
       schoolLng: a.student.school?.longitude || null,
+      schoolCounty: a.student.school?.county || null,
+      schoolSubCounty: a.student.school?.subCounty || null,
+      schoolWard: a.student.school?.ward || null,
       lecturerLat: a.submissionLatitude,
       lecturerLng: a.submissionLongitude,
       gpsAccuracy: a.gpsAccuracy,

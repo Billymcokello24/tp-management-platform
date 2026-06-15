@@ -1,9 +1,63 @@
 /**
  * Geofence utility — Haversine formula for distance calculations
  * Used to verify physical presence at a school during assessments.
+ *
+ * Also provides reverse geocode via Nominatim (OpenStreetMap).
  */
 
 const EARTH_RADIUS_METERS = 6_371_000; // Earth's radius in meters
+
+// In-memory cache for reverse geocode results to avoid hitting Nominatim rate limits
+const geocodeCache = new Map<string, { name: string; timestamp: number }>();
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+/**
+ * Reverse geocode a latitude/longitude pair to a human-readable location name.
+ * Uses Nominatim (OpenStreetMap) with caching and rate-limit protection.
+ *
+ * @returns A short location string (e.g. "CBD, Nairobi, Kenya") or null on failure
+ */
+export async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
+  const key = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+  const cached = geocodeCache.get(key);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.name;
+  }
+
+  try {
+    // Nominatim requires a User-Agent identifying the app
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&zoom=16`,
+      { headers: { "User-Agent": "TMU-TP-Management-Platform/1.0" } }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const displayName: string | undefined = data?.display_name;
+    if (!displayName) return null;
+
+    // Shorten to the first 3 parts for readability
+    const parts = displayName.split(", ");
+    const shortName = parts.slice(0, 3).join(", ");
+
+    geocodeCache.set(key, { name: shortName, timestamp: Date.now() });
+    return shortName;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Synchronous cache lookup for reverse geocode — returns cached value only.
+ * Use this for server-rendered contexts where async fetch is not possible.
+ */
+export function getCachedLocationName(lat: number, lng: number): string | null {
+  const key = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+  const cached = geocodeCache.get(key);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.name;
+  }
+  return null;
+}
 
 /**
  * Convert degrees to radians.

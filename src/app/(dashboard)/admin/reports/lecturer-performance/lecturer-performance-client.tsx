@@ -68,6 +68,7 @@ export function LecturerPerformanceClient({ data }: { data: LecturerPerformance[
       filename: `TMU_Lecturer_Performance_Report.pdf`,
       image: { type: "jpeg", quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+      pagebreak: { mode: ["avoid-all", "css", "legacy"] },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const },
     };
     await html2pdf().set(opt as any).from(el).save();

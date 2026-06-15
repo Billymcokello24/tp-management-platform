@@ -45,7 +45,7 @@ export function LessonPlanDetailClient({ plan }: { plan: any }) {
           image: { type: "jpeg", quality: 0.98 },
           html2canvas: { scale: 2, useCORS: true, letterRendering: true, windowWidth: 1000 },
           jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const },
-          pagebreak: { mode: ["css", "legacy"] },
+          pagebreak: { mode: ["avoid-all", "css", "legacy"] },
         } as any)
         .from(pdfRef.current)
         .toPdf();
