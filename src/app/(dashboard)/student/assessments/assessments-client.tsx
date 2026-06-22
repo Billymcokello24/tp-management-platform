@@ -2,16 +2,9 @@
 
 import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/admin/data-table";
-import { Button } from "@/components/ui/button";
-import { Eye } from "lucide-react";
-import Link from "next/link";
 
 interface AssessmentSlot {
   id: string;
-  totalMarks: number;
-  grade: string;
-  status: string;
-  createdAt: string;
   subject: string;
 }
 
@@ -27,25 +20,7 @@ interface StudentRow {
   a3s2: AssessmentSlot | null;
 }
 
-const scoreColor = (score: number | undefined) => {
-  if (!score) return "text-muted-foreground";
-  if (score >= 70) return "text-emerald-600 font-bold";
-  if (score < 40) return "text-red-600 font-bold";
-  return "text-foreground font-semibold";
-};
-
 export function StudentAssessmentsClient({ students }: { students: StudentRow[] }) {
-
-  const ScoreCell = ({ slot }: { slot: AssessmentSlot | null }) => {
-    if (!slot) return <span className="text-muted-foreground text-xs">—</span>;
-    return (
-      <div className="text-center">
-        <span className={scoreColor(slot.totalMarks)}>{slot.totalMarks}</span>
-        <span className="text-muted-foreground text-xs">/100</span>
-      </div>
-    );
-  };
-
   const columns: ColumnDef<StudentRow>[] = [
     {
       accessorKey: "studentName",
@@ -58,96 +33,56 @@ export function StudentAssessmentsClient({ students }: { students: StudentRow[] 
       ),
     },
     {
-      id: "a1s1",
-      header: () => <div className="text-center text-xs">A1S1</div>,
-      cell: ({ row }) => <ScoreCell slot={row.original.a1s1} />,
-    },
-    {
-      id: "a1s2",
-      header: () => <div className="text-center text-xs">A1S2</div>,
-      cell: ({ row }) => <ScoreCell slot={row.original.a1s2} />,
-    },
-    {
-      id: "a2s1",
-      header: () => <div className="text-center text-xs">A2S1</div>,
-      cell: ({ row }) => <ScoreCell slot={row.original.a2s1} />,
-    },
-    {
-      id: "a2s2",
-      header: () => <div className="text-center text-xs">A2S2</div>,
-      cell: ({ row }) => <ScoreCell slot={row.original.a2s2} />,
-    },
-    {
-      id: "a3s1",
-      header: () => <div className="text-center text-xs">A3S1</div>,
-      cell: ({ row }) => <ScoreCell slot={row.original.a3s1} />,
-    },
-    {
-      id: "a3s2",
-      header: () => <div className="text-center text-xs">A3S2</div>,
-      cell: ({ row }) => <ScoreCell slot={row.original.a3s2} />,
-    },
-    {
-      id: "average",
-      header: () => <div className="text-center">Avg</div>,
+      id: "progress",
+      header: "Progress",
       cell: ({ row }) => {
-        const scores = [
-          row.original.a1s1?.totalMarks, 
-          row.original.a1s2?.totalMarks, 
-          row.original.a2s1?.totalMarks,
-          row.original.a2s2?.totalMarks,
-          row.original.a3s1?.totalMarks,
-          row.original.a3s2?.totalMarks,
-        ].filter((v): v is number => v != null);
-
-        if (scores.length === 0) return <span className="text-muted-foreground text-xs">—</span>;
-        const avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+        const slots = [
+          { key: "A1S1", value: row.original.a1s1 },
+          { key: "A1S2", value: row.original.a1s2 },
+          { key: "A2S1", value: row.original.a2s1 },
+          { key: "A2S2", value: row.original.a2s2 },
+          { key: "A3S1", value: row.original.a3s1 },
+          { key: "A3S2", value: row.original.a3s2 },
+        ];
+        const completed = slots.filter((s) => s.value !== null).length;
         return (
-          <div className="text-center">
-            <span className={scoreColor(avg)}>{avg}</span>
-            <span className="text-muted-foreground text-xs">%</span>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-1.5">
+              {slots.map((slot, i) => (
+                <div key={i} className="flex flex-col items-center gap-1">
+                  <div
+                    className={`h-2.5 w-2.5 rounded-full ${
+                      slot.value ? "bg-emerald-500" : "bg-muted-foreground/20"
+                    }`}
+                  />
+                  <span className="text-[10px] text-muted-foreground">{slot.key}</span>
+                </div>
+              ))}
+            </div>
+            <span className="text-xs text-muted-foreground">{completed}/6 assessments completed</span>
           </div>
         );
       },
     },
     {
-      id: "progress",
-      header: "Progress",
+      id: "subjects",
+      header: "Subjects",
       cell: ({ row }) => {
-        const completed = [
-          row.original.a1s1, 
-          row.original.a1s2, 
+        const completedSlots = [
+          row.original.a1s1,
+          row.original.a1s2,
           row.original.a2s1,
           row.original.a2s2,
           row.original.a3s1,
           row.original.a3s2,
-        ].filter(Boolean).length;
+        ].filter(Boolean);
+        const subjects = [...new Set(completedSlots.map((s) => s!.subject))];
         return (
-          <div className="flex items-center gap-1.5">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div
-                key={i}
-                className={`h-2.5 w-2.5 rounded-full ${
-                  i <= completed ? "bg-emerald-500" : "bg-muted-foreground/20"
-                }`}
-              />
-            ))}
-            <span className="text-xs text-muted-foreground ml-1">{completed}/6</span>
+          <div className="text-sm">
+            {subjects.length > 0 ? subjects.join(", ") : <span className="text-muted-foreground text-xs">—</span>}
           </div>
         );
       },
-    },
-    {
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => (
-        <Link href={`/student/assessments/${row.original.studentId}`}>
-          <Button variant="ghost" size="sm">
-            <Eye className="h-4 w-4 mr-2 text-primary" />
-            View Full Report
-          </Button>
-        </Link>
-      ),
     },
   ];
 
@@ -163,7 +98,7 @@ export function StudentAssessmentsClient({ students }: { students: StudentRow[] 
             My Assessments
           </h1>
           <p className="text-sm text-muted-foreground mt-2 font-medium">
-            View the official assessment reports completed by your supervisor.
+            Track the progress of your teaching practice assessments. Completion status is shown below.
           </p>
         </div>
       </div>

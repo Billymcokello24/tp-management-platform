@@ -1,14 +1,14 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { AssessmentDetailClient } from "../../../admin/assessments/[id]/assessment-detail-client";
+import { StudentAssessmentDetailClient } from "./assessment-detail-client";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
 export default async function StudentAssessmentDetailPage({ params }: PageProps) {
-  const { id } = await params; // This is technically the student ID, which should match their own ID
+  const { id } = await params;
   
   const session = await auth();
   if (!session?.user?.id || (session.user as any).role !== "STUDENT") {
@@ -59,5 +59,5 @@ export default async function StudentAssessmentDetailPage({ params }: PageProps)
     notFound();
   }
 
-  return <AssessmentDetailClient assessments={assessments} />;
+  return <StudentAssessmentDetailClient assessments={assessments} />;
 }
